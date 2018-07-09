@@ -1,0 +1,9 @@
+language: csharp  
+sudo: required  
+dist: trusty  
+mono: none
+dotnet: 2.0.9
+before_script:
+  - dotnet restore
+script:  
+  - dotnet test ./RtspClientSharp.UnitTests -c Release -f netcoreapp2.0

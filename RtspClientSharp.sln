@@ -1,0 +1,54 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2026
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Perfmaker.Rtsp.Client", "RtspClientSharp\RtspClientSharp.csproj", "{DC94331F-847E-4456-BD27-F147551750FB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{F6A04B7F-1138-4A5F-A306-1A78F443169F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleRtspClient", "Examples\SimpleRtspClient\SimpleRtspClient.csproj", "{145A3C38-93D1-4E35-8FB9-A8E166E0DAC3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Perfmaker.Rtsp.Client.UnitTests", "RtspClientSharp.UnitTests\RtspClientSharp.UnitTests.csproj", "{FD515510-7EBA-45A4-AC0A-2C6993DD0FBC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleRtspPlayer", "Examples\SimpleRtspPlayer\SimpleRtspPlayer.csproj", "{40493D0C-21B8-4357-AE75-D7637B3FC223}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libffmpeghelper", "Examples\libffmpeghelper\libffmpeghelper.vcxproj", "{3C96BD24-3212-4CD8-86E3-63D1E3E38155}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DC94331F-847E-4456-BD27-F147551750FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC94331F-847E-4456-BD27-F147551750FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC94331F-847E-4456-BD27-F147551750FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC94331F-847E-4456-BD27-F147551750FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{145A3C38-93D1-4E35-8FB9-A8E166E0DAC3}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{145A3C38-93D1-4E35-8FB9-A8E166E0DAC3}.Debug|Any CPU.Build.0 = Debug|x86
+		{145A3C38-93D1-4E35-8FB9-A8E166E0DAC3}.Release|Any CPU.ActiveCfg = Release|x86
+		{145A3C38-93D1-4E35-8FB9-A8E166E0DAC3}.Release|Any CPU.Build.0 = Release|x86
+		{FD515510-7EBA-45A4-AC0A-2C6993DD0FBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD515510-7EBA-45A4-AC0A-2C6993DD0FBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD515510-7EBA-45A4-AC0A-2C6993DD0FBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD515510-7EBA-45A4-AC0A-2C6993DD0FBC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40493D0C-21B8-4357-AE75-D7637B3FC223}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40493D0C-21B8-4357-AE75-D7637B3FC223}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40493D0C-21B8-4357-AE75-D7637B3FC223}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40493D0C-21B8-4357-AE75-D7637B3FC223}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C96BD24-3212-4CD8-86E3-63D1E3E38155}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{3C96BD24-3212-4CD8-86E3-63D1E3E38155}.Release|Any CPU.ActiveCfg = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{145A3C38-93D1-4E35-8FB9-A8E166E0DAC3} = {F6A04B7F-1138-4A5F-A306-1A78F443169F}
+		{40493D0C-21B8-4357-AE75-D7637B3FC223} = {F6A04B7F-1138-4A5F-A306-1A78F443169F}
+		{3C96BD24-3212-4CD8-86E3-63D1E3E38155} = {F6A04B7F-1138-4A5F-A306-1A78F443169F}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F5BB521B-37CF-4433-9370-76D4DD3BCEBF}
+	EndGlobalSection
+EndGlobal
