@@ -16,7 +16,7 @@
 - Low GC pressure during receive stage (when RTSP session is established); low amount of freezes under high load</Description>
     <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 	<RequireLicenseAcceptance>false</RequireLicenseAcceptance>
-    <PackageIconUrl>http://github.com/BogdanovKirill/RtspClientSharp/Images/package_icon.png</PackageIconUrl>
+    <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png</PackageIconUrl>
     <Copyright>Copyright ©2018 Kirill Bogdanov</Copyright>
   </PropertyGroup>
 
