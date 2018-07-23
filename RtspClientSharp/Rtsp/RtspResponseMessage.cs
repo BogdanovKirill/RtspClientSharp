@@ -25,7 +25,7 @@ namespace RtspClientSharp.Rtsp
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
-            var headersStream = new MemoryStream(byteSegment.Array, byteSegment.Offset, byteSegment.Count);
+            var headersStream = new MemoryStream(byteSegment.Array, byteSegment.Offset, byteSegment.Count, false);
             var headersReader = new StreamReader(headersStream);
 
             string startLine = headersReader.ReadLine();
@@ -64,8 +64,9 @@ namespace RtspClientSharp.Rtsp
             {
                 sb.AppendLine();
 
-                string bodyString =
-                    Encoding.ASCII.GetString(ResponseBody.Array, ResponseBody.Offset, ResponseBody.Count);
+                string bodyString = Encoding.ASCII.GetString(ResponseBody.Array,
+                    ResponseBody.Offset, ResponseBody.Count);
+
                 sb.Append(bodyString);
             }
 

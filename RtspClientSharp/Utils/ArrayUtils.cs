@@ -49,7 +49,7 @@
             if (count < pattern.Length)
                 return -1;
 
-            int endIndex = count > 0 ? startIndex + count : array.Length;
+            int endIndex = startIndex + count;
 
             int foundIndex = 0;
             for (; startIndex < endIndex; startIndex++)
@@ -58,6 +58,26 @@
                     foundIndex = 0;
                 else if (++foundIndex == pattern.Length)
                     return startIndex - foundIndex + 1;
+            }
+
+            return -1;
+        }
+
+        public static int LastIndexOfBytes(byte[] array, byte[] pattern, int startIndex, int count)
+        {
+            if (count < pattern.Length)
+                return -1;
+
+            int endIndex = startIndex + count - 1;
+
+            int lastPatternIndex = pattern.Length - 1;
+            int foundIndex = lastPatternIndex;
+            for (; endIndex >= startIndex; endIndex--)
+            {
+                if (array[endIndex] != pattern[foundIndex])
+                    foundIndex = lastPatternIndex;
+                else if (--foundIndex == -1)
+                    return endIndex;
             }
 
             return -1;

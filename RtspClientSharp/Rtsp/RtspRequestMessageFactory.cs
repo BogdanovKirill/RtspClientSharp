@@ -46,6 +46,18 @@ namespace RtspClientSharp.Rtsp
             return rtspRequestMessage;
         }
 
+        public RtspRequestMessage CreateSetupUdpUnicastRequest(string trackName, int rtpPort, int rtcpPort)
+        {
+            Uri trackUri = !Uri.IsWellFormedUriString(trackName, UriKind.Absolute)
+                ? new Uri(GetContentBasedUri(), trackName)
+                : new Uri(trackName, UriKind.Absolute);
+
+            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.SETUP, trackUri, ProtocolVersion, ++_cSeq,
+                _userAgent, SessionId);
+            rtspRequestMessage.Headers.Add("Transport", $"RTP/AVP;unicast;client_port={rtpPort}-{rtcpPort}");
+            return rtspRequestMessage;
+        }
+
         public RtspRequestMessage CreatePlayRequest()
         {
             Uri uri = GetContentBasedUri();
@@ -68,13 +80,6 @@ namespace RtspClientSharp.Rtsp
             var rtspRequestMessage = new RtspRequestMessage(RtspMethod.GET_PARAMETER, _rtspUri, ProtocolVersion,
                 ++_cSeq, _userAgent, SessionId);
             return rtspRequestMessage;
-        }
-
-        public void ResetState()
-        {
-            _cSeq = 0;
-            ContentBase = null;
-            SessionId = null;
         }
 
         private Uri GetContentBasedUri()

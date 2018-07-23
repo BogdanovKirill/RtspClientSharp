@@ -12,10 +12,9 @@ namespace RtspClientSharp
     public sealed class RtspClient : IRtspClient
     {
         private readonly Func<IRtspTransportClient> _transportClientProvider;
-        private IRtspTransportClient _rtspTransportClient;
-        private bool _anyTpktPacketReceived;
+        private bool _anyFrameReceived;
+        private RtspClientInternal _rtspClientInternal;
         private int _disposed;
-        private readonly RtspClientInternal _rtspClientInternal;
 
         public ConnectionParameters ConnectionParameters { get; }
 
@@ -25,9 +24,6 @@ namespace RtspClientSharp
         {
             ConnectionParameters = connectionParameters ??
                                    throw new ArgumentNullException(nameof(connectionParameters));
-
-            _transportClientProvider = CreateTransportClient;
-            _rtspClientInternal = CreateRtspClientInternal(connectionParameters);
         }
 
         internal RtspClient(ConnectionParameters connectionParameters,
@@ -35,11 +31,8 @@ namespace RtspClientSharp
         {
             ConnectionParameters = connectionParameters ??
                                    throw new ArgumentNullException(nameof(connectionParameters));
-
             _transportClientProvider = transportClientProvider ??
                                        throw new ArgumentNullException(nameof(transportClientProvider));
-
-            _rtspClientInternal = CreateRtspClientInternal(connectionParameters);
         }
 
         ~RtspClient()
@@ -57,11 +50,11 @@ namespace RtspClientSharp
         {
             await Task.Run(async () =>
             {
-                _rtspTransportClient = _transportClientProvider();
+                _rtspClientInternal = CreateRtspClientInternal(ConnectionParameters, _transportClientProvider);
 
                 try
                 {
-                    Task connectionTask = ConnectInternalAsync(token);
+                    Task connectionTask = _rtspClientInternal.ConnectAsync(token);
 
                     if (connectionTask.IsCompleted)
                     {
@@ -81,7 +74,7 @@ namespace RtspClientSharp
                         {
                             connectionTask.IgnoreExceptions();
 
-                            if (delayTask.Status == TaskStatus.Canceled)
+                            if (delayTask.IsCanceled)
                                 throw new OperationCanceledException();
 
                             throw new TimeoutException();
@@ -93,8 +86,8 @@ namespace RtspClientSharp
                 }
                 catch (Exception e)
                 {
-                    _rtspTransportClient.Dispose();
-                    _rtspTransportClient = null;
+                    _rtspClientInternal.Dispose();
+                    Volatile.Write(ref _rtspClientInternal, null);
 
                     if (e is TimeoutException)
                         throw new RtspClientException("Connection timeout", e);
@@ -125,12 +118,12 @@ namespace RtspClientSharp
         /// <exception cref="InvalidOperationException"></exception>
         public async Task ReceiveAsync(CancellationToken token)
         {
-            if (_rtspTransportClient == null)
+            if (_rtspClientInternal == null)
                 throw new InvalidOperationException("Client should be connected first");
 
             try
             {
-                Task receiveInternalTask = _rtspClientInternal.ReceiveAsync(_rtspTransportClient, token);
+                Task receiveInternalTask = _rtspClientInternal.ReceiveAsync(token);
 
                 if (receiveInternalTask.IsCompleted)
                 {
@@ -146,10 +139,10 @@ namespace RtspClientSharp
 
                     while (true)
                     {
-                        _anyTpktPacketReceived = false;
+                        _anyFrameReceived = false;
 
                         Task result = await Task.WhenAny(receiveInternalTask,
-                            Task.Delay(ConnectionParameters.ReceiveTimeout, delayTaskToken));
+                            Task.Delay(ConnectionParameters.ReceiveTimeout, delayTaskToken)).ConfigureAwait(false);
 
                         if (result == receiveInternalTask)
                         {
@@ -160,20 +153,25 @@ namespace RtspClientSharp
 
                         if (result.IsCanceled)
                         {
-                            await Task.WhenAny(receiveInternalTask,
-                                Task.Delay(TimeSpan.FromSeconds(1), CancellationToken.None));
+                            if(ConnectionParameters.CancelTimeout != TimeSpan.Zero)
+                                await Task.WhenAny(receiveInternalTask,
+                                    Task.Delay(ConnectionParameters.CancelTimeout, CancellationToken.None));
 
                             receiveInternalTask.IgnoreExceptions();
                             throw new OperationCanceledException();
                         }
 
-                        if (!Volatile.Read(ref _anyTpktPacketReceived))
+                        if (!Volatile.Read(ref _anyFrameReceived))
                         {
                             receiveInternalTask.IgnoreExceptions();
                             throw new RtspClientException("Receive timeout", new TimeoutException());
                         }
                     }
                 }
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (OperationCanceledException)
             {
@@ -189,8 +187,8 @@ namespace RtspClientSharp
             }
             finally
             {
-                _rtspTransportClient.Dispose();
-                _rtspTransportClient = null;
+                _rtspClientInternal.Dispose();
+                Volatile.Write(ref _rtspClientInternal, null);
             }
         }
 
@@ -199,39 +197,27 @@ namespace RtspClientSharp
         /// </summary>
         public void Dispose()
         {
-            if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 0)
+            if (Interlocked.CompareExchange(ref _disposed, 1, 0) != 0)
                 return;
 
-            IRtspTransportClient client = _rtspTransportClient;
+            RtspClientInternal rtspClientInternal = Volatile.Read(ref _rtspClientInternal);
 
-            if (client != null)
-                client.Dispose();
+            if (rtspClientInternal != null)
+                rtspClientInternal.Dispose();
 
             GC.SuppressFinalize(this);
         }
 
-        private IRtspTransportClient CreateTransportClient()
+        private RtspClientInternal CreateRtspClientInternal(ConnectionParameters connectionParameters,
+            Func<IRtspTransportClient> transportClientProvider)
         {
-            if (ConnectionParameters.ConnectionUri.Scheme.Equals(Uri.UriSchemeHttp,
-                StringComparison.InvariantCultureIgnoreCase))
-                return new RtspHttpTransportClient(ConnectionParameters);
-
-            return new RtspTcpTransportClient(ConnectionParameters);
-        }
-
-        private async Task ConnectInternalAsync(CancellationToken token)
-        {
-            await _rtspTransportClient.ConnectAsync(token);
-
-            await _rtspClientInternal.ConnectAsync(_rtspTransportClient, token);
-        }
-
-        private RtspClientInternal CreateRtspClientInternal(ConnectionParameters connectionParameters)
-        {
-            return new RtspClientInternal(connectionParameters)
+            return new RtspClientInternal(connectionParameters, transportClientProvider)
             {
-                ReadingContinues = () => Volatile.Write(ref _anyTpktPacketReceived, true),
-                FrameReceived = frame => FrameReceived?.Invoke(this, frame)
+                FrameReceived = frame =>
+                {
+                    Volatile.Write(ref _anyFrameReceived, true);
+                    FrameReceived?.Invoke(this, frame);
+                }
             };
         }
     }

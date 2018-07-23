@@ -5,8 +5,6 @@ namespace RtspClientSharp
 {
     public class ConnectionParameters
     {
-        private static readonly TimeSpan DefaultConnectTimeout = TimeSpan.FromSeconds(30);
-        private static readonly TimeSpan DefaultReceiveTimeout = TimeSpan.FromSeconds(10);
         private const string DefaultUserAgent = "RtspClientSharp";
 
         /// <summary>
@@ -14,15 +12,19 @@ namespace RtspClientSharp
         /// and from "http://" for RTSP over HTTP tunneling
         /// </summary>
         public Uri ConnectionUri { get; }
+
         /// <summary>
         /// Should be used to get only one video/audio track from device.
         /// Important notes: some devices won't connect in that case (SETUP request could not be processed)
         /// </summary>
         public RequiredTracks RequiredTracks { get; set; } = RequiredTracks.All;
+
         public NetworkCredential Credentials { get; }
-        public TimeSpan ConnectTimeout { get; set; } = DefaultConnectTimeout;
-        public TimeSpan ReceiveTimeout { get; set; } = DefaultReceiveTimeout;
+        public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
+        public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(10);
+        public TimeSpan CancelTimeout { get; set; } = TimeSpan.FromSeconds(5);
         public string UserAgent { get; set; } = DefaultUserAgent;
+        public RtpTransportProtocol RtpTransport { get; set; } = RtpTransportProtocol.TCP;
 
         public ConnectionParameters(Uri connectionUri)
         {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,8 @@ namespace RtspClientSharp.UnitTests.Rtsp
             private readonly Func<string, string> _responseProvider;
             private readonly MemoryStream _requestStream = new MemoryStream();
             private MemoryStream _responseStream;
+
+            public override EndPoint RemoteEndPoint => new IPEndPoint(0, 0);
 
             public RtspTransportClientFake(ConnectionParameters connectionParameters,
                 Func<string, string> responseProvider)

@@ -7,5 +7,6 @@
         public static readonly string ContentBase = "CONTENT-BASE";
         public static readonly string Public = "PUBLIC";
         public static readonly string Session = "SESSION";
+        public static readonly string Transport = "TRANSPORT";
     }
 }

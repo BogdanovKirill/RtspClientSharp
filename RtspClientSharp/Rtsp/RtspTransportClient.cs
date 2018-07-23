@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,9 +12,11 @@ namespace RtspClientSharp.Rtsp
     abstract class RtspTransportClient : IRtspTransportClient
     {
         protected readonly ConnectionParameters ConnectionParameters;
-        private readonly byte[] _readBuffer = new byte[Constants.MaxResponseHeadersSize];
+        private readonly byte[] _buffer = new byte[Constants.MaxResponseHeadersSize];
 
         private Authenticator _authenticator;
+
+        public abstract EndPoint RemoteEndPoint { get; }
 
         protected RtspTransportClient(ConnectionParameters connectionParameters)
         {
@@ -41,7 +44,7 @@ namespace RtspClientSharp.Rtsp
         {
             token.ThrowIfCancellationRequested();
 
-            await SendRequestAsync(requestMessage);
+            await SendRequestAsync(requestMessage, token);
 
             RtspResponseMessage responseMessage = await GetResponseAsync(responseReadPortionSize);
 
@@ -51,7 +54,7 @@ namespace RtspClientSharp.Rtsp
             if (ConnectionParameters.Credentials.IsEmpty() || _authenticator != null)
                 throw new RtspBadResponseCodeException(responseMessage.StatusCode);
 
-            string authenticateHeader = responseMessage.Headers.Get(WellKnownHeaders.WwwAuthenticate);
+            string authenticateHeader = responseMessage.Headers[WellKnownHeaders.WwwAuthenticate];
 
             if (string.IsNullOrEmpty(authenticateHeader))
                 throw new RtspBadResponseCodeException(responseMessage.StatusCode);
@@ -59,7 +62,7 @@ namespace RtspClientSharp.Rtsp
             _authenticator = Authenticator.Create(ConnectionParameters.Credentials, authenticateHeader);
             requestMessage.CSeq++;
 
-            await SendRequestAsync(requestMessage);
+            await SendRequestAsync(requestMessage, token);
             responseMessage = await GetResponseAsync();
 
             if (responseMessage.StatusCode == RtspStatusCode.Unauthorized)
@@ -68,14 +71,17 @@ namespace RtspClientSharp.Rtsp
             return responseMessage;
         }
 
-        public Task SendRequestAsync(RtspRequestMessage requestMessage)
+        public Task SendRequestAsync(RtspRequestMessage requestMessage, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
+
             if (_authenticator != null)
                 AddAuthorizationHeader(requestMessage);
 
-            byte[] requestBytes = Encoding.ASCII.GetBytes(requestMessage.ToString());
-
-            return WriteAsync(requestBytes, 0, requestBytes.Length);
+            string requestMessageString = requestMessage.ToString();
+             
+            int written = Encoding.ASCII.GetBytes(requestMessageString, 0, requestMessageString.Length, _buffer, 0);
+            return WriteAsync(_buffer, 0, written);
         }
 
         public abstract void Dispose();
@@ -88,23 +94,22 @@ namespace RtspClientSharp.Rtsp
         {
             int totalRead = await ReadUntilEndOfHeadersAsync(responseReadPortionSize);
 
-            int startOfResponse = ArrayUtils.IndexOfBytes(_readBuffer, Constants.RtspProtocolNameBytes, 0, totalRead);
+            int startOfResponse = ArrayUtils.IndexOfBytes(_buffer, Constants.RtspProtocolNameBytes, 0, totalRead);
 
             if (startOfResponse == -1)
                 throw new RtspBadResponseException("\"RTSP\" start signature is not found");
 
-            int endOfResponseHeaders = ArrayUtils.IndexOfBytes(_readBuffer, Constants.DoubleCrlfBytes,
-                                           startOfResponse, totalRead - startOfResponse) +
+            int endOfResponseHeaders = ArrayUtils.LastIndexOfBytes(_buffer, Constants.DoubleCrlfBytes, 0, totalRead) +
                                        Constants.DoubleCrlfBytes.Length;
 
             if (endOfResponseHeaders == -1)
                 throw new RtspBadResponseException("End of response headers is not found");
 
             var headersByteSegment =
-                new ArraySegment<byte>(_readBuffer, startOfResponse, endOfResponseHeaders - startOfResponse);
+                new ArraySegment<byte>(_buffer, startOfResponse, endOfResponseHeaders - startOfResponse);
             RtspResponseMessage rtspResponseMessage = RtspResponseMessage.Parse(headersByteSegment);
 
-            string contentLengthString = rtspResponseMessage.Headers.Get(WellKnownHeaders.ContentLength);
+            string contentLengthString = rtspResponseMessage.Headers[WellKnownHeaders.ContentLength];
 
             if (string.IsNullOrEmpty(contentLengthString))
                 return rtspResponseMessage;
@@ -120,10 +125,10 @@ namespace RtspClientSharp.Rtsp
 
             int dataPartSize = totalRead - headersByteSegment.Count;
 
-            Buffer.BlockCopy(_readBuffer, endOfResponseHeaders, _readBuffer, 0, dataPartSize);
-            await ReadExactAsync(_readBuffer, dataPartSize, (int) (contentLength - dataPartSize));
+            Buffer.BlockCopy(_buffer, endOfResponseHeaders, _buffer, 0, dataPartSize);
+            await ReadExactAsync(_buffer, dataPartSize, (int) (contentLength - dataPartSize));
 
-            rtspResponseMessage.ResponseBody = new ArraySegment<byte>(_readBuffer, 0, (int) contentLength);
+            rtspResponseMessage.ResponseBody = new ArraySegment<byte>(_buffer, 0, (int) contentLength);
             return rtspResponseMessage;
         }
 
@@ -136,7 +141,7 @@ namespace RtspClientSharp.Rtsp
 
             do
             {
-                int count = _readBuffer.Length - totalRead;
+                int count = _buffer.Length - totalRead;
 
                 if (readPortionSize != 0 && count > readPortionSize)
                     count = readPortionSize;
@@ -145,15 +150,22 @@ namespace RtspClientSharp.Rtsp
                     throw new RtspBadResponseException(
                         $"Response is too large (> {Constants.MaxResponseHeadersSize / 1024} KB)");
 
-                int read = await ReadAsync(_readBuffer, offset, count);
+                int read = await ReadAsync(_buffer, offset, count);
 
                 if (read == 0)
                     throw new EndOfStreamException("End of rtsp stream");
 
-                offset += read;
                 totalRead += read;
 
-                endOfHeaders = ArrayUtils.IndexOfBytes(_readBuffer, Constants.DoubleCrlfBytes, 0, totalRead);
+                int startIndex = offset - (Constants.DoubleCrlfBytes.Length - 1);
+
+                if (startIndex < 0)
+                    startIndex = 0;
+
+                endOfHeaders = ArrayUtils.LastIndexOfBytes(_buffer, Constants.DoubleCrlfBytes, startIndex,
+                    totalRead - startIndex);
+
+                offset += read;
             } while (endOfHeaders == -1);
 
             return totalRead;

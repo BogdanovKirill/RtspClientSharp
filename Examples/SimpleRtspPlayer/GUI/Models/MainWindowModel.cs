@@ -15,6 +15,9 @@ namespace SimpleRtspPlayer.GUI.Models
 
         public void Start(ConnectionParameters connectionParameters)
         {
+            if (_rawFramesSource != null)
+                return;
+
             _rawFramesSource = new RawFramesSource(connectionParameters);
             _rawFramesSource.ConnectionStatusChanged += ConnectionStatusChanged;
 
@@ -25,8 +28,12 @@ namespace SimpleRtspPlayer.GUI.Models
 
         public void Stop()
         {
+            if (_rawFramesSource == null)
+                return;
+
             _rawFramesSource.Stop();
             _realtimeVideoSource.SetRawFramesSource(null);
+            _rawFramesSource = null;
         }
 
         private void ConnectionStatusChanged(object sender, string s)

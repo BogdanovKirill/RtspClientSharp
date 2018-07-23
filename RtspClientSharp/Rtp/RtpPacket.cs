@@ -20,8 +20,23 @@ namespace RtspClientSharp.Rtp
         public uint SyncSourceId { get; private set; }
         public int ExtensionHeaderId { get; private set; }
 
-        public ArraySegment<byte> ExtensionHeaderSegment { get; private set; }
-        public ArraySegment<byte> PayloadSegment { get; private set; }
+        public ArraySegment<byte> PayloadSegment { get; set; }
+
+        internal RtpPacket(ushort seqNumber, ArraySegment<byte> payloadSegment)
+        {
+            ProtocolVersion = 1;
+            PaddingFlag = false;
+            ExtensionFlag = false;
+            CsrcCount = 0;
+            MarkerBit = false;
+            PayloadType = 0;
+            SeqNumber = 0;
+            Timestamp = 0;
+            SyncSourceId = 0;
+            ExtensionHeaderId = 0;
+            SeqNumber = seqNumber;
+            PayloadSegment = payloadSegment;
+        }
 
         public static bool TryParse(ArraySegment<byte> byteSegment, out RtpPacket rtpPacket)
         {
@@ -60,11 +75,7 @@ namespace RtspClientSharp.Rtp
                 offset += 2;
 
                 int extensionHeaderLength = BigEndianConverter.ReadUInt16(byteSegment.Array, offset) * 4;
-                offset += 2;
-
-                rtpPacket.ExtensionHeaderSegment =
-                    new ArraySegment<byte>(byteSegment.Array, offset, extensionHeaderLength);
-                offset += extensionHeaderLength;
+                offset += 2 + extensionHeaderLength;
             }
 
             int payloadSize = byteSegment.Offset + byteSegment.Count - offset;

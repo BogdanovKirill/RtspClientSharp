@@ -20,7 +20,7 @@ namespace RtspClientSharp.UnitTests.Rtcp
             var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStatisticsProviderMock.Object,
                 rtcpSenderStatisticsProviderFake.Object, 1);
 
-            rtcpReportsProvider.GetReportPackets();
+            rtcpReportsProvider.GetReportPackets().ToList();
 
             rtpStatisticsProviderMock.Verify(x => x.ResetState());
         }
@@ -45,7 +45,7 @@ namespace RtspClientSharp.UnitTests.Rtcp
             var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStatisticsProviderFake.Object,
                 rtcpSenderStatisticsProviderFake.Object, 1112234);
 
-            IReadOnlyList<RtcpPacket> packets = rtcpReportsProvider.GetReportPackets();
+            IReadOnlyList<RtcpPacket> packets = rtcpReportsProvider.GetReportPackets().ToList();
 
             var receiverReportPacket = (RtcpReceiverReportPacket) packets.First(p => p is RtcpReceiverReportPacket);
             Assert.IsFalse(receiverReportPacket.PaddingFlag);
@@ -71,7 +71,7 @@ namespace RtspClientSharp.UnitTests.Rtcp
             var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStatisticsProviderFake.Object,
                 rtcpSenderStatisticsProviderFake.Object, 1112234);
 
-            IReadOnlyList<RtcpPacket> packets = rtcpReportsProvider.GetReportPackets();
+            IReadOnlyList<RtcpPacket> packets = rtcpReportsProvider.GetReportPackets().ToList();
 
             var sdesReportPacket = (RtcpSdesReportPacket) packets.First(p => p is RtcpSdesReportPacket);
 

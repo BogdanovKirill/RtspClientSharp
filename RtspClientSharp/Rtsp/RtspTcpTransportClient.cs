@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,8 +11,12 @@ namespace RtspClientSharp.Rtsp
 {
     class RtspTcpTransportClient : RtspTransportClient
     {
-        private TcpClient _tcpClient;
+        private Socket _tcpClient;
         private Stream _networkStream;
+        private EndPoint _remoteEndPoint = new IPEndPoint(IPAddress.None, 0);
+        private int _disposed;
+
+        public override EndPoint RemoteEndPoint => _remoteEndPoint;
 
         public RtspTcpTransportClient(ConnectionParameters connectionParameters)
             : base(connectionParameters)
@@ -20,7 +25,7 @@ namespace RtspClientSharp.Rtsp
 
         public override async Task ConnectAsync(CancellationToken token)
         {
-            _tcpClient = TcpClientFactory.Create();
+            _tcpClient = NetworkClientFactory.CreateTcpClient();
 
             Uri connectionUri = ConnectionParameters.ConnectionUri;
 
@@ -28,7 +33,8 @@ namespace RtspClientSharp.Rtsp
 
             await _tcpClient.ConnectAsync(connectionUri.Host, rtspPort);
 
-            _networkStream = _tcpClient.GetStream();
+            _remoteEndPoint = _tcpClient.RemoteEndPoint;
+            _networkStream = new NetworkStream(_tcpClient, false);
         }
 
         public override Stream GetStream()
@@ -41,12 +47,10 @@ namespace RtspClientSharp.Rtsp
 
         public override void Dispose()
         {
-            if (_tcpClient == null)
+            if (Interlocked.CompareExchange(ref _disposed, 1, 0) != 0)
                 return;
 
-            _tcpClient.Client.Close();
-            _tcpClient.Dispose();
-            _tcpClient = null;
+            _tcpClient?.Close();
         }
 
         protected override Task WriteAsync(byte[] buffer, int offset, int count)

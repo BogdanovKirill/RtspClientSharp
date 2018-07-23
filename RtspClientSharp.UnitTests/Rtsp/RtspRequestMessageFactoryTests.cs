@@ -47,7 +47,7 @@ namespace RtspClientSharp.UnitTests.Rtsp
         }
 
         [TestMethod]
-        public void CreateSetupInterleavedRequest_ValidProperties()
+        public void CreateSetupTcpInterleavedRequest_ValidProperties()
         {
             const string testTrackName = "testTrack";
             var factory = new RtspRequestMessageFactory(FakeUri, UserAgent);
@@ -57,7 +57,25 @@ namespace RtspClientSharp.UnitTests.Rtsp
             Assert.AreEqual(RtspMethod.SETUP, request.Method);
             Assert.AreEqual(FakeUri + "testTrack", request.ConnectionUri.ToString());
             Assert.AreEqual(UserAgent, request.UserAgent);
-            Assert.IsTrue(request.Headers.Get("Transport").Contains($"{1}-{2}"));
+            string transportHeaderValue = request.Headers.Get("Transport");
+            Assert.IsTrue(transportHeaderValue.Contains("TCP"));
+            Assert.IsTrue(transportHeaderValue.Contains($"{1}-{2}"));
+        }
+
+        [TestMethod]
+        public void CreateSetupUdpUnicastRequest_ValidProperties()
+        {
+            const string testTrackName = "testTrack";
+            var factory = new RtspRequestMessageFactory(FakeUri, UserAgent);
+
+            RtspRequestMessage request = factory.CreateSetupUdpUnicastRequest(testTrackName, 1, 2);
+
+            Assert.AreEqual(RtspMethod.SETUP, request.Method);
+            Assert.AreEqual(FakeUri + "testTrack", request.ConnectionUri.ToString());
+            Assert.AreEqual(UserAgent, request.UserAgent);
+            string transportHeaderValue = request.Headers.Get("Transport");
+            Assert.IsTrue(transportHeaderValue.Contains("unicast"));
+            Assert.IsTrue(transportHeaderValue.Contains($"{1}-{2}"));
         }
 
         [TestMethod]

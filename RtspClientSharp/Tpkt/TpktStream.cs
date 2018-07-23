@@ -86,7 +86,8 @@ namespace RtspClientSharp.Tpkt
             Buffer.BlockCopy(payloadSegment.Array, payloadSegment.Offset, _writeBuffer, TpktHeader.Size,
                 payloadSegment.Count);
 
-            await _stream.WriteAsync(_writeBuffer, 0, _writeBuffer.Length);
+            int write = 4 + payloadSegment.Count;
+            await _stream.WriteAsync(_writeBuffer, 0, write);
         }
 
         private async Task<int> FindNextPacketAsync()

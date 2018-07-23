@@ -15,12 +15,16 @@ namespace RtspClientSharp.Rtsp
 {
     class RtspHttpTransportClient : RtspTransportClient
     {
-        private TcpClient _streamDataClient;
-        private TcpClient _commandsClient;
+        private Socket _streamDataClient;
+        private Socket _commandsClient;
         private string _sessionCookie;
         private Authenticator _authenticator;
         private Stream _dataNetworkStream;
         private uint _commandCounter;
+        private EndPoint _remoteEndPoint = new IPEndPoint(IPAddress.None, 0);
+        private int _disposed;
+
+        public override EndPoint RemoteEndPoint => _remoteEndPoint;
 
         public RtspHttpTransportClient(ConnectionParameters connectionParameters)
             : base(connectionParameters)
@@ -32,7 +36,7 @@ namespace RtspClientSharp.Rtsp
             _commandCounter = 0;
             _sessionCookie = Guid.NewGuid().ToString("N").Substring(0, 10);
 
-            _streamDataClient = TcpClientFactory.Create();
+            _streamDataClient = NetworkClientFactory.CreateTcpClient();
 
             Uri connectionUri = ConnectionParameters.ConnectionUri;
 
@@ -40,7 +44,8 @@ namespace RtspClientSharp.Rtsp
 
             await _streamDataClient.ConnectAsync(connectionUri.Host, httpPort);
 
-            _dataNetworkStream = _streamDataClient.GetStream();
+            _remoteEndPoint = _streamDataClient.RemoteEndPoint;
+            _dataNetworkStream = new NetworkStream(_streamDataClient, false);
 
             string request = ComposeGetRequest();
             byte[] requestBytes = Encoding.ASCII.GetBytes(request);
@@ -100,24 +105,16 @@ namespace RtspClientSharp.Rtsp
 
         public override void Dispose()
         {
-            if (_streamDataClient != null)
-            {
-                _streamDataClient.Client.Close();
-                _streamDataClient.Dispose();
-                _streamDataClient = null;
-            }
+            if (Interlocked.CompareExchange(ref _disposed, 1, 0) != 0)
+                return;
 
-            if (_commandsClient != null)
-            {
-                _commandsClient.Client.Close();
-                _commandsClient.Dispose();
-                _commandsClient = null;
-            }
+            _streamDataClient?.Close();
+            _commandsClient?.Close();
         }
 
         protected override async Task WriteAsync(byte[] buffer, int offset, int count)
         {
-            using (_commandsClient = TcpClientFactory.Create())
+            using (_commandsClient = NetworkClientFactory.CreateTcpClient())
             {
                 Uri connectionUri = ConnectionParameters.ConnectionUri;
 
@@ -125,16 +122,19 @@ namespace RtspClientSharp.Rtsp
 
                 await _commandsClient.ConnectAsync(connectionUri.Host, httpPort);
 
-                NetworkStream commandsStream = _commandsClient.GetStream();
-
                 string base64CodedCommandString = Convert.ToBase64String(buffer, offset, count);
                 byte[] base64CommandBytes = Encoding.ASCII.GetBytes(base64CodedCommandString);
 
                 string request = ComposePostRequest(base64CommandBytes);
                 byte[] requestBytes = Encoding.ASCII.GetBytes(request);
 
-                await commandsStream.WriteAsync(requestBytes, 0, requestBytes.Length);
-                await commandsStream.WriteAsync(base64CommandBytes, 0, base64CommandBytes.Length);
+                ArraySegment<byte>[] sendList =
+                {
+                    new ArraySegment<byte>(requestBytes),
+                    new ArraySegment<byte>(base64CommandBytes)
+                };
+
+                await _commandsClient.SendAsync(sendList, SocketFlags.None);
             }
         }
 
@@ -200,17 +200,24 @@ namespace RtspClientSharp.Rtsp
                 int count = buffer.Length - totalRead;
 
                 if (count == 0)
-                    throw new RtspBadResponseException($"Response is too large (> {buffer.Length / 1024} KB)");
+                    throw new HttpBadResponseException($"Response is too large (> {buffer.Length / 1024} KB)");
 
                 int read = await stream.ReadAsync(buffer, offset, count);
 
                 if (read == 0)
                     throw new EndOfStreamException("End of http stream");
 
-                offset += read;
                 totalRead += read;
 
-                endOfHeaders = ArrayUtils.IndexOfBytes(buffer, Constants.DoubleCrlfBytes, 0, totalRead);
+                int startIndex = offset - (Constants.DoubleCrlfBytes.Length - 1);
+
+                if (startIndex < 0)
+                    startIndex = 0;
+
+                endOfHeaders = ArrayUtils.LastIndexOfBytes(buffer, Constants.DoubleCrlfBytes, startIndex,
+                    totalRead - startIndex);
+
+                offset += read;
             } while (endOfHeaders == -1);
 
             return totalRead;

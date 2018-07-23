@@ -24,7 +24,7 @@ namespace SimpleRtspClient
 
             cancellationTokenSource.Cancel();
 
-            Console.WriteLine("Cancelling");
+            Console.WriteLine("Canceling");
             connectTask.Wait(CancellationToken.None);
         }
 
@@ -47,6 +47,10 @@ namespace SimpleRtspClient
                         {
                             await rtspClient.ConnectAsync(token);
                         }
+                        catch (OperationCanceledException)
+                        {
+                            return;
+                        }
                         catch (RtspClientException e)
                         {
                             Console.WriteLine(e.ToString());
@@ -59,6 +63,10 @@ namespace SimpleRtspClient
                         try
                         {
                             await rtspClient.ReceiveAsync(token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            return;
                         }
                         catch (RtspClientException e)
                         {

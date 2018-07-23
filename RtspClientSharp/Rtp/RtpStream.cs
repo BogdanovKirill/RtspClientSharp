@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using RtspClientSharp.MediaParsers;
 
 namespace RtspClientSharp.Rtp
 {
     class RtpStream : ITransportStream, IRtpStatisticsProvider
     {
+        private readonly IRtpSequenceAssembler _rtpSequenceAssembler;
         private readonly IMediaPayloadParser _mediaPayloadParser;
         private readonly int _samplesFrequency;
 
@@ -20,10 +22,17 @@ namespace RtspClientSharp.Rtp
         public uint CumulativePacketLost { get; private set; }
         public ushort SequenceCycles { get; private set; }
 
-        public RtpStream(IMediaPayloadParser mediaPayloadParser, int samplesFrequency)
+        public RtpStream(IMediaPayloadParser mediaPayloadParser, int samplesFrequency,
+            IRtpSequenceAssembler rtpSequenceAssembler = null)
         {
             _mediaPayloadParser = mediaPayloadParser ?? throw new ArgumentNullException(nameof(mediaPayloadParser));
             _samplesFrequency = samplesFrequency;
+
+            if (rtpSequenceAssembler != null)
+            {
+                _rtpSequenceAssembler = rtpSequenceAssembler;
+                _rtpSequenceAssembler.PacketPassed += ProcessImmediately;
+            }
         }
 
         public void Process(ArraySegment<byte> payloadSegment)
@@ -31,6 +40,14 @@ namespace RtspClientSharp.Rtp
             if (!RtpPacket.TryParse(payloadSegment, out RtpPacket rtpPacket))
                 return;
 
+            if (_rtpSequenceAssembler != null)
+                _rtpSequenceAssembler.ProcessPacket(ref rtpPacket);
+            else
+                ProcessImmediately(ref rtpPacket);
+        }
+
+        private void ProcessImmediately(ref RtpPacket rtpPacket)
+        {
             SyncSourceId = rtpPacket.SyncSourceId;
 
             if (!_isFirstPacket)
@@ -67,7 +84,7 @@ namespace RtspClientSharp.Rtp
             _previousSeqNumber = rtpPacket.SeqNumber;
             _previousTimestamp = rtpPacket.Timestamp;
 
-            if (payloadSegment.Count == 0)
+            if (rtpPacket.PayloadSegment.Count == 0)
                 return;
 
             TimeSpan timeOffset = _samplesFrequency != 0

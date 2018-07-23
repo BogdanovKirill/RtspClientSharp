@@ -5,6 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:gui="clr-namespace:SimpleRtspPlayer.GUI"
         xmlns:views="clr-namespace:SimpleRtspPlayer.GUI.Views"
+        xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+        xmlns:command="http://www.galasoft.ch/mvvmlight"
         mc:Ignorable="d"
         Title="SimpleRtspPlayer" Width="1200" Height="675" MinWidth="16" MinHeight="16"
         WindowStartupLocation="CenterScreen"
@@ -26,6 +28,11 @@
             </Style.Triggers>
         </Style>
     </Window.Resources>
+    <i:Interaction.Triggers>
+        <i:EventTrigger EventName="Closing">
+            <command:EventToCommand Command="{Binding ClosingCommand}" PassEventArgsToCommand="True" />
+        </i:EventTrigger>
+    </i:Interaction.Triggers>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />

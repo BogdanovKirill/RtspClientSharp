@@ -83,6 +83,7 @@ namespace RtspClientSharp.MediaParsers
         {
             _nalBuffer.ResetState();
             _h264Parser.ResetState();
+            _waitForStartFu = true;
         }
 
         private void ParseFU(TimeSpan timeOffset, ArraySegment<byte> byteSegment, int donFieldSize, bool markerBit)
@@ -119,6 +120,8 @@ namespace RtspClientSharp.MediaParsers
                         DateTime timestamp = GetFrameTimestamp(timeOffset);
                         _h264Parser.GenerateFrame(timestamp);
                     }
+
+                    _waitForStartFu = true;
                 }
                 else
                     _waitForStartFu = false;

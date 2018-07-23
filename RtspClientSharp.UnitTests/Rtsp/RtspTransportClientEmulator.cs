@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.IO;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,6 +55,8 @@ namespace RtspClientSharp.UnitTests.Rtsp
         private static readonly byte[] RtcpInterleavedByePacketsBytes =
             {TpktHeader.Id, 0x02, 0x00, 0x04, 0x80, 0xCB, 0x00, 0x00};
 
+        public EndPoint RemoteEndPoint => new IPEndPoint(IPAddress.Loopback, 11080);
+
         public virtual Task ConnectAsync(CancellationToken token)
         {
             return Task.CompletedTask;
@@ -98,7 +101,7 @@ namespace RtspClientSharp.UnitTests.Rtsp
             }
         }
 
-        public Task SendRequestAsync(RtspRequestMessage requestMessage)
+        public Task SendRequestAsync(RtspRequestMessage requestMessage, CancellationToken token)
         {
             return Task.CompletedTask;
         }

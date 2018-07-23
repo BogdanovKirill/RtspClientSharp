@@ -48,6 +48,9 @@ namespace RtspClientSharp.Rtcp
 
                 int payloadLength = dwordLength * 4;
 
+                if(payloadLength > totalLength - 4)
+                    throw new ArgumentException("Invalid RTCP packet size. It seems that data segment contains bad data", nameof(byteSegment));
+
                 RtcpPacket packet;
 
                 if (payloadType == 200)
@@ -74,7 +77,7 @@ namespace RtspClientSharp.Rtcp
                 yield return packet;
 
                 offset += payloadLength;
-                totalLength -= payloadLength;
+                totalLength -= 4 + payloadLength;
             }
         }
     }

@@ -9,7 +9,6 @@ namespace RtspClientSharp.Rtcp
         private readonly IRtpStatisticsProvider _rtpStatisticsProvider;
         private readonly IRtcpSenderStatisticsProvider _rtcpSenderStatisticsProvider;
         private readonly uint _senderSyncSourceId;
-        private readonly List<RtcpPacket> _reportPacketsList = new List<RtcpPacket>();
 
         public RtcpReceiverReportsProvider(IRtpStatisticsProvider rtpStatisticsProvider,
             IRtcpSenderStatisticsProvider rtcpSenderStatisticsProvider, uint senderSyncSourceId)
@@ -22,16 +21,15 @@ namespace RtspClientSharp.Rtcp
             _senderSyncSourceId = senderSyncSourceId;
         }
 
-        public IReadOnlyList<RtcpPacket> GetReportPackets()
+        public IEnumerable<RtcpPacket> GetReportPackets()
         {
-            _reportPacketsList.Clear();
-
             RtcpReceiverReportPacket receiverReport = CreateReceiverReport();
-            _reportPacketsList.Add(receiverReport);
-            RtcpSdesReportPacket sdesReport = CreateSdesReport();
-            _reportPacketsList.Add(sdesReport);
 
-            return _reportPacketsList;
+            yield return receiverReport;
+
+            RtcpSdesReportPacket sdesReport = CreateSdesReport();
+
+            yield return sdesReport;
         }
 
         private RtcpReceiverReportPacket CreateReceiverReport()

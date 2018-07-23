@@ -5,7 +5,7 @@
 
 This repo contains RTSP client implementation (called "RtspClientSharp") for .NET Standard 2.0
 ## Features
-- Supported transport protocols: TCP and HTTP (UDP will be added)
+- Supported transport protocols: TCP/HTTP/UDP
 - Supported media codecs: H.264/MJPEG/AAC/G711A/G711U/PCM/G726
 - No external dependencies, pure C# code
 - Asynchronous nature with cancellation tokens support
@@ -39,6 +39,7 @@ Something like this:
 var serverUri = new Uri("rtsp://192.168.1.77:554/ucast/11");
 var credentials = new NetworkCredential("admin", "123456");
 var connectionParameters = new ConnectionParameters(serverUri, credentials);
+connectionParameters.RtpTransport == RtpTransportProtocol.TCP;
 using(var rtspClient = new RtspClient(connectionParameters))
 {
     rtspClient.FrameReceived += (sender, frame) =>
@@ -55,8 +56,10 @@ using(var rtspClient = new RtspClient(connectionParameters))
             case RawG711UFrame g711UFrame:
             case RawPCMFrame pcmFrame:
             case RawG726Frame g726Frame:
+               break;
         }
     }
+	
     await rtspClient.ConnectAsync(token);
     await rtspClient.ReceiveAsync(token);
 }

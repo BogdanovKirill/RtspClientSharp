@@ -26,6 +26,7 @@ namespace SimpleRtspPlayer.GUI.Views
         private int _height;
         private Int32Rect _dirtyRect;
         private readonly Action<IDecodedVideoFrame> _invalidateAction;
+        private DispatcherOperation _invalidateOperation;
 
         private Task _handleSizeChangedTask = Task.CompletedTask;
         private CancellationTokenSource _resizeCancellationTokenSource = new CancellationTokenSource();
@@ -141,7 +142,10 @@ namespace SimpleRtspPlayer.GUI.Views
 
         private void OnFrameReceived(object sender, IDecodedVideoFrame decodedFrame)
         {
-            Application.Current.Dispatcher.Invoke(_invalidateAction, DispatcherPriority.Send, decodedFrame);
+            if(_invalidateOperation != null && _invalidateOperation.Status != DispatcherOperationStatus.Completed)
+                return;
+
+            _invalidateOperation = Application.Current.Dispatcher.BeginInvoke(_invalidateAction, DispatcherPriority.Send, decodedFrame);
         }
 
         private void Invalidate(IDecodedVideoFrame decodedVideoFrame)

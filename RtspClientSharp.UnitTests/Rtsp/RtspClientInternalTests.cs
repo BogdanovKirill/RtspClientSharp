@@ -17,8 +17,8 @@ namespace RtspClientSharp.UnitTests.Rtsp
         {
             var transportClient = new RtspTransportClientEmulator();
 
-            var rtspClient = new RtspClientInternal(_fakeConnectionParameters);
-            await rtspClient.ConnectAsync(transportClient, CancellationToken.None);
+            var rtspClient = new RtspClientInternal(_fakeConnectionParameters, () => transportClient);
+            await rtspClient.ConnectAsync(CancellationToken.None);
         }
 
         [TestMethod]
@@ -29,31 +29,31 @@ namespace RtspClientSharp.UnitTests.Rtsp
             var cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
 
-            var rtspClient = new RtspClientInternal(_fakeConnectionParameters);
+            var rtspClient = new RtspClientInternal(_fakeConnectionParameters, () => transportClient);
 
-            await rtspClient.ConnectAsync(transportClient, cancellationTokenSource.Token);
+            await rtspClient.ConnectAsync(cancellationTokenSource.Token);
         }
 
         [TestMethod]
         public async Task ReceiveAsync_InterleavedModeAndOneRtcpByePacketInStream_SuccessfullyFinished()
         {
             var transportClient = new RtspTransportClientEmulator();
-            var rtspClient = new RtspClientInternal(_fakeConnectionParameters);
+            var rtspClient = new RtspClientInternal(_fakeConnectionParameters, () => transportClient);
 
-            await rtspClient.ConnectAsync(transportClient, CancellationToken.None);
-            await rtspClient.ReceiveAsync(transportClient, CancellationToken.None);
+            await rtspClient.ConnectAsync(CancellationToken.None);
+            await rtspClient.ReceiveAsync(CancellationToken.None);
         }
 
         [TestMethod]
         public async Task ReceiveAsync_CancellationRequested_ImmediateReturn()
         {
             var transportClient = new RtspTransportClientEmulator();
-            var rtspClient = new RtspClientInternal(_fakeConnectionParameters);
+            var rtspClient = new RtspClientInternal(_fakeConnectionParameters, () => transportClient);
             var cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
 
-            await rtspClient.ConnectAsync(transportClient, CancellationToken.None);
-            await rtspClient.ReceiveAsync(transportClient, cancellationTokenSource.Token);
+            await rtspClient.ConnectAsync(CancellationToken.None);
+            await rtspClient.ReceiveAsync(cancellationTokenSource.Token);
         }
     }
 }
