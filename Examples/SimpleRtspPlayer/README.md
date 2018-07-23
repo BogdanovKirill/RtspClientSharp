@@ -7,4 +7,4 @@
 - Supported scaling modes: nearest, bilinear, bicubic (default)
 - Low GC pressure
 
-# ![SimpleRtspPlayer](Images/simplertspplayer.png)
+# ![SimpleRtspPlayer](../../Images/simplertspplayer.png)

@@ -61,8 +61,8 @@ using(var rtspClient = new RtspClient(connectionParameters))
     await rtspClient.ReceiveAsync(token);
 }
 ```
-You could find more complex samples here (e.g. simple [RTSP player](https://github.com/BogdanovKirill/RtspClientSharp/Examples/SimpleRtspPlayer) with full frame decoding and rendering processes):
-https://github.com/BogdanovKirill/RtspClientSharp/Examples
+You could find more complex samples here (e.g. simple [RTSP player](https://github.com/BogdanovKirill/RtspClientSharp/tree/master/Examples/SimpleRtspPlayer) with full frame decoding and rendering processes):
+https://github.com/BogdanovKirill/RtspClientSharp/tree/master/Examples
 
 ## Donation
 If this project help you reduce time to develop, you can give me a cup of coffee :) 
