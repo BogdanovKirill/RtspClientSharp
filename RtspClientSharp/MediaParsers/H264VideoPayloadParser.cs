@@ -35,7 +35,7 @@ namespace RtspClientSharp.MediaParsers
             _h264Parser = new H264Parser {FrameGenerated = OnFrameGenerated};
 
             if (codecInfo.SpsPpsBytes.Length != 0)
-                _h264Parser.Parse(new ArraySegment<byte>(codecInfo.SpsPpsBytes));
+                _h264Parser.Parse(DateTime.MinValue, new ArraySegment<byte>(codecInfo.SpsPpsBytes), false, false);
 
             _nalBuffer = new ElasticBuffer(8 * 1024, 512 * 1024);
         }
@@ -45,36 +45,30 @@ namespace RtspClientSharp.MediaParsers
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
             PackModeType packMode = (PackModeType) (byteSegment.Array[byteSegment.Offset] & 0x1F);
+            DateTime frameTimestamp = GetFrameTimestamp(timeOffset);
 
             switch (packMode)
             {
                 case PackModeType.FU_A:
-                    ParseFU(timeOffset, byteSegment, 0, markerBit);
+                    ParseFU(frameTimestamp, byteSegment, 0, markerBit);
                     break;
                 case PackModeType.FU_B:
-                    ParseFU(timeOffset, byteSegment, DecodingOrderNumberFieldSize, markerBit);
+                    ParseFU(frameTimestamp, byteSegment, DecodingOrderNumberFieldSize, markerBit);
                     break;
                 case PackModeType.STAP_A:
-                    ParseSTAP(timeOffset, byteSegment, 0, markerBit);
+                    ParseSTAP(frameTimestamp, byteSegment, 0, markerBit);
                     break;
                 case PackModeType.STAP_B:
-                    ParseSTAP(timeOffset, byteSegment, DecodingOrderNumberFieldSize, markerBit);
+                    ParseSTAP(frameTimestamp, byteSegment, DecodingOrderNumberFieldSize, markerBit);
                     break;
                 case PackModeType.MTAP16:
-                    ParseMTAP(timeOffset, byteSegment, 2, markerBit);
+                    ParseMTAP(frameTimestamp, byteSegment, 2, markerBit);
                     break;
                 case PackModeType.MTAP24:
-                    ParseMTAP(timeOffset, byteSegment, 3, markerBit);
+                    ParseMTAP(frameTimestamp, byteSegment, 3, markerBit);
                     break;
                 default:
-                    _h264Parser.Parse(byteSegment);
-
-                    if (markerBit)
-                    {
-                        DateTime timestamp = GetFrameTimestamp(timeOffset);
-                        _h264Parser.GenerateFrame(timestamp);
-                    }
-
+                    _h264Parser.Parse(frameTimestamp, byteSegment, false, markerBit);
                     break;
             }
         }
@@ -86,7 +80,7 @@ namespace RtspClientSharp.MediaParsers
             _waitForStartFu = true;
         }
 
-        private void ParseFU(TimeSpan timeOffset, ArraySegment<byte> byteSegment, int donFieldSize, bool markerBit)
+        private void ParseFU(DateTime frameTimestamp, ArraySegment<byte> byteSegment, int donFieldSize, bool markerBit)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
@@ -113,14 +107,7 @@ namespace RtspClientSharp.MediaParsers
 
                 if (endFlag)
                 {
-                    _h264Parser.Parse(nalUnitSegment, true);
-
-                    if (markerBit)
-                    {
-                        DateTime timestamp = GetFrameTimestamp(timeOffset);
-                        _h264Parser.GenerateFrame(timestamp);
-                    }
-
+                    _h264Parser.Parse(frameTimestamp, nalUnitSegment, true, markerBit);
                     _waitForStartFu = true;
                 }
                 else
@@ -140,16 +127,13 @@ namespace RtspClientSharp.MediaParsers
             if (endFlag)
             {
                 ArraySegment<byte> nalUnitSegment = _nalBuffer.GetAccumulatedBytes();
-                _h264Parser.Parse(nalUnitSegment, true);
-
-                DateTime timestamp = GetFrameTimestamp(timeOffset);
-                _h264Parser.GenerateFrame(timestamp);
-
+                _h264Parser.Parse(frameTimestamp, nalUnitSegment, true, markerBit);
                 _waitForStartFu = true;
             }
         }
 
-        private void ParseSTAP(TimeSpan timeOffset, ArraySegment<byte> byteSegment, int donFieldSize, bool markerBit)
+        private void ParseSTAP(DateTime frameTimestamp, ArraySegment<byte> byteSegment, int donFieldSize,
+            bool markerBit)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
@@ -163,19 +147,14 @@ namespace RtspClientSharp.MediaParsers
                 startOffset += 2;
 
                 var nalUnitSegment = new ArraySegment<byte>(byteSegment.Array, startOffset, nalUnitSize);
-                _h264Parser.Parse(nalUnitSegment, true);
 
                 startOffset += nalUnitSize;
+
+                _h264Parser.Parse(frameTimestamp, nalUnitSegment, true, markerBit && startOffset >= endOffset);
             }
-
-            if (!markerBit)
-                return;
-
-            DateTime timestamp = GetFrameTimestamp(timeOffset);
-            _h264Parser.GenerateFrame(timestamp);
         }
 
-        private void ParseMTAP(TimeSpan timeOffset, ArraySegment<byte> byteSegment, int tsOffsetFieldSize,
+        private void ParseMTAP(DateTime frameTimestamp, ArraySegment<byte> byteSegment, int tsOffsetFieldSize,
             bool markerBit)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
@@ -192,16 +171,11 @@ namespace RtspClientSharp.MediaParsers
                 startOffset += 2 + DondFieldSize + tsOffsetFieldSize;
 
                 var nalUnitSegment = new ArraySegment<byte>(byteSegment.Array, startOffset, nalUnitSize);
-                _h264Parser.Parse(nalUnitSegment, true);
 
                 startOffset += nalUnitSize;
+
+                _h264Parser.Parse(frameTimestamp, nalUnitSegment, true, markerBit && startOffset >= endOffset);
             }
-
-            if (!markerBit)
-                return;
-
-            DateTime timestamp = GetFrameTimestamp(timeOffset);
-            _h264Parser.GenerateFrame(timestamp);
         }
     }
 }

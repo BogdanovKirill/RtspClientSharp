@@ -71,7 +71,7 @@ namespace SimpleRtspPlayer.GUI.ViewModels
 
             var credential = new NetworkCredential(Login, Password);
             var connectionParameters = new ConnectionParameters(deviceUri, credential);
-            connectionParameters.RtpTransport = RtpTransportProtocol.UDP;
+ 
             _mainWindowModel.Start(connectionParameters);
             _mainWindowModel.StatusChanged += MainWindowModelOnStatusChanged;
 

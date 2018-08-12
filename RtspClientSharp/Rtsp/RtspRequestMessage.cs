@@ -23,7 +23,7 @@ namespace RtspClientSharp.Rtsp
 
         public override string ToString()
         {
-            var queryBuilder = new StringBuilder();
+            var queryBuilder = new StringBuilder(512);
 
             queryBuilder.AppendFormat("{0} {1} RTSP/{2}\r\n", Method, ConnectionUri, ProtocolVersion.ToString(2));
             queryBuilder.AppendFormat("CSeq: {0}\r\n", CSeq);

@@ -79,7 +79,7 @@ namespace RtspClientSharp.Rtsp
                 AddAuthorizationHeader(requestMessage);
 
             string requestMessageString = requestMessage.ToString();
-             
+
             int written = Encoding.ASCII.GetBytes(requestMessageString, 0, requestMessageString.Length, _buffer, 0);
             return WriteAsync(_buffer, 0, written);
         }

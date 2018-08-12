@@ -30,7 +30,7 @@ namespace RtspClientSharp.UnitTests.Rtcp
             Assert.AreEqual(0, senderReportPacket.SourceCount);
             Assert.AreEqual(28, senderReportPacket.Length);
             Assert.AreEqual(0x2753B30u, senderReportPacket.SyncSourceId);
-            Assert.AreEqual((ulong) 0xDF000140 << 32 | 0x5313AD5Bu, senderReportPacket.NtpTimestamp);
+            Assert.AreEqual((long) 0xDF000140 << 32 | 0x5313AD5Bu, senderReportPacket.NtpTimestamp);
         }
 
         [TestMethod]

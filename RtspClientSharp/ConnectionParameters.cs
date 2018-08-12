@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Net;
+using RtspClientSharp.Rtsp;
 
 namespace RtspClientSharp
 {
     public class ConnectionParameters
     {
         private const string DefaultUserAgent = "RtspClientSharp";
+        private Uri _fixedRtspUri;
 
         /// <summary>
         /// Uri should start from "rtsp://" prefix for RTSP over TCP transport
@@ -40,6 +42,23 @@ namespace RtspClientSharp
 
             ConnectionUri = connectionUri;
             Credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+        }
+
+        internal Uri GetFixedRtspUri()
+        {
+            if (_fixedRtspUri != null)
+                return _fixedRtspUri;
+
+            var uriBuilder = new UriBuilder(ConnectionUri)
+            {
+                Scheme = "rtsp"
+            };
+
+            if (ConnectionUri.Port == -1)
+                uriBuilder.Port = Constants.DefaultRtspPort;
+
+            _fixedRtspUri = uriBuilder.Uri;
+            return _fixedRtspUri;
         }
 
         private static void ValidateUri(Uri connectionUri)

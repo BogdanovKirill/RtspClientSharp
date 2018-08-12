@@ -9,6 +9,7 @@ namespace RtspClientSharp.Rtcp
         private readonly IRtpStatisticsProvider _rtpStatisticsProvider;
         private readonly IRtcpSenderStatisticsProvider _rtcpSenderStatisticsProvider;
         private readonly uint _senderSyncSourceId;
+        private readonly string _machineName;
 
         public RtcpReceiverReportsProvider(IRtpStatisticsProvider rtpStatisticsProvider,
             IRtcpSenderStatisticsProvider rtcpSenderStatisticsProvider, uint senderSyncSourceId)
@@ -19,6 +20,7 @@ namespace RtspClientSharp.Rtcp
                                             throw new ArgumentNullException(nameof(rtcpSenderStatisticsProvider));
 
             _senderSyncSourceId = senderSyncSourceId;
+            _machineName = Environment.MachineName;
         }
 
         public IEnumerable<RtcpPacket> GetReportPackets()
@@ -75,9 +77,7 @@ namespace RtspClientSharp.Rtcp
 
         private RtcpSdesReportPacket CreateSdesReport()
         {
-            string machineName = Environment.MachineName;
-
-            var items = new[] {new RtcpSdesNameItem(machineName)};
+            var items = new[] {new RtcpSdesNameItem(_machineName)};
             var chunks = new[] {new RtcpSdesChunk(_senderSyncSourceId, items)};
 
             var sdesReport = new RtcpSdesReportPacket(chunks);

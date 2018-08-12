@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace RtspClientSharp.Rtcp
 {
     class RtcpStream : ITransportStream, IRtcpSenderStatisticsProvider
     {
-        public DateTime LastTimeReportReceived { get; private set; } = DateTime.MinValue;
-        public ulong LastNtpTimeReportReceived { get; private set; }
+        private long _lastNtpTimeReportReceived;
+        private long _lastTimeReportReceivedTicks = DateTime.MinValue.Ticks;
+
+        public DateTime LastTimeReportReceived => new DateTime(Interlocked.Read(ref _lastTimeReportReceivedTicks));
+        public long LastNtpTimeReportReceived => Interlocked.Read(ref _lastNtpTimeReportReceived);
 
         public event EventHandler SessionShutdown;
 
@@ -19,8 +23,8 @@ namespace RtspClientSharp.Rtcp
                 switch (packet)
                 {
                     case RtcpSenderReportPacket senderReport:
-                        LastNtpTimeReportReceived = senderReport.NtpTimestamp;
-                        LastTimeReportReceived = DateTime.UtcNow;
+                        Interlocked.Exchange(ref _lastNtpTimeReportReceived, senderReport.NtpTimestamp);
+                        Interlocked.Exchange(ref _lastTimeReportReceivedTicks, DateTime.UtcNow.Ticks);
                         break;
                     case RtcpByePacket _:
                         SessionShutdown?.Invoke(this, EventArgs.Empty);

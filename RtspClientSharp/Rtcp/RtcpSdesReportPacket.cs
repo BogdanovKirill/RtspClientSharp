@@ -43,8 +43,11 @@ namespace RtspClientSharp.Rtcp
         {
             base.Serialize(stream);
 
-            foreach (var chunk in Chunks)
+            for (var i = 0; i < Chunks.Count; i++)
+            {
+                RtcpSdesChunk chunk = Chunks[i];
                 chunk.Serialize(stream);
+            }
 
             if (PaddingFlag)
                 stream.Write(PaddingBytes, 0, _paddingByteCount);

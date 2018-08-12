@@ -39,7 +39,7 @@ Something like this:
 var serverUri = new Uri("rtsp://192.168.1.77:554/ucast/11");
 var credentials = new NetworkCredential("admin", "123456");
 var connectionParameters = new ConnectionParameters(serverUri, credentials);
-connectionParameters.RtpTransport == RtpTransportProtocol.TCP;
+connectionParameters.RtpTransport = RtpTransportProtocol.TCP;
 using(var rtspClient = new RtspClient(connectionParameters))
 {
     rtspClient.FrameReceived += (sender, frame) =>

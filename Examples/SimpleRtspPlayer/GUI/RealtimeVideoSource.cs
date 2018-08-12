@@ -19,7 +19,7 @@ namespace SimpleRtspPlayer.GUI
         private readonly Dictionary<FFmpegVideoCodecId, FFmpegVideoDecoder> _videoDecodersMap =
             new Dictionary<FFmpegVideoCodecId, FFmpegVideoDecoder>();
 
-        private ulong _desiredSize;
+        private long _desiredSize;
 
         public event EventHandler<IDecodedVideoFrame> FrameReceived;
 
@@ -41,8 +41,8 @@ namespace SimpleRtspPlayer.GUI
 
         public void SetVideoSize(int width, int height)
         {
-            ulong desiredSize = (ulong) width << 32 | (uint) height;
-            Volatile.Write(ref _desiredSize, desiredSize);
+            long desiredSize = (long) width << 32 | (uint) height;
+            Interlocked.Exchange(ref _desiredSize, desiredSize);
         }
 
         public void Dispose()
@@ -68,7 +68,7 @@ namespace SimpleRtspPlayer.GUI
             if (!decoder.TryDecode(rawVideoFrame, out DecodedVideoFrameParameters decodedFrameParameters))
                 return;
 
-            ulong desiredSize = Volatile.Read(ref _desiredSize);
+            long desiredSize = Interlocked.Read(ref _desiredSize);
 
             int targetWidth;
             int targetHeight;

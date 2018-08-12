@@ -19,23 +19,21 @@ namespace RtspClientSharp.UnitTests.MediaParsers
 
             RawH264Frame frame = null;
             var parser = new H264Parser {FrameGenerated = rawFrame => frame = (RawH264Frame) rawFrame};
-            parser.Parse(new ArraySegment<byte>(spsBytes));
-            parser.Parse(new ArraySegment<byte>(ppsBytes));
-            parser.Parse(new ArraySegment<byte>(iFrameBytes));
-            parser.GenerateFrame(DateTime.UtcNow);
+            parser.Parse(DateTime.UtcNow, new ArraySegment<byte>(spsBytes), false, false);
+            parser.Parse(DateTime.UtcNow, new ArraySegment<byte>(ppsBytes), false, false);
+            parser.Parse(DateTime.UtcNow, new ArraySegment<byte>(iFrameBytes), false, true);
 
             Assert.IsInstanceOfType(frame, typeof(RawH264IFrame));
             Assert.IsTrue(frame.FrameSegment.SequenceEqual(iFrameBytes));
 
-            parser.Parse(new ArraySegment<byte>(pFrameBytes));
-            parser.GenerateFrame(DateTime.UtcNow);
+            parser.Parse(DateTime.UtcNow, new ArraySegment<byte>(pFrameBytes), false, true);
 
             Assert.IsInstanceOfType(frame, typeof(RawH264PFrame));
             Assert.IsTrue(frame.FrameSegment.SequenceEqual(pFrameBytes));
         }
 
         [TestMethod]
-        public void ResetState_IFrameThenReset_FrameNotGenerated()
+        public void ResetState_SpsPpsThenIFrameThenReset_FrameGenerated()
         {
             var spsBytes = Convert.FromBase64String("AAAAAWdNQCmaZgUB7YC1AQEBBenA");
             var ppsBytes = Convert.FromBase64String("AAAAAWjuPIA=");
@@ -43,13 +41,13 @@ namespace RtspClientSharp.UnitTests.MediaParsers
 
             RawH264Frame frame = null;
             var parser = new H264Parser {FrameGenerated = rawFrame => frame = (RawH264Frame) rawFrame};
-            parser.Parse(new ArraySegment<byte>(spsBytes));
-            parser.Parse(new ArraySegment<byte>(ppsBytes));
-            parser.Parse(new ArraySegment<byte>(iFrameBytes));
-            parser.ResetState();
-            parser.GenerateFrame(DateTime.UtcNow);
+            parser.Parse(DateTime.UtcNow, new ArraySegment<byte>(spsBytes), false, false);
+            parser.Parse(DateTime.UtcNow, new ArraySegment<byte>(ppsBytes), false, false);
 
-            Assert.IsNull(frame);
+            parser.ResetState();
+            parser.Parse(DateTime.UtcNow, new ArraySegment<byte>(iFrameBytes), false, true);
+
+            Assert.IsInstanceOfType(frame, typeof(RawH264IFrame));
         }
     }
 }

@@ -36,7 +36,8 @@ namespace RtspClientSharp.MediaParsers
             _frameBuffer = new ElasticBuffer(8 * 1024, 8 * 1024 * 1024);
         }
 
-        public void Parse(ArraySegment<byte> byteSegment, bool dontSliceForce = false)
+        public void Parse(DateTime frameTimestamp, ArraySegment<byte> byteSegment, bool dontSliceForce,
+            bool generateFrame)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
@@ -44,19 +45,22 @@ namespace RtspClientSharp.MediaParsers
                 RawH264Frame.StartMarker))
             {
                 if (dontSliceForce)
-                    ProcessNalUnit(byteSegment, true);
+                    ProcessNalUnit(frameTimestamp, byteSegment, true, generateFrame);
                 else
                     H264Slicer.Slice(byteSegment, SlicerOnNalUnitFound);
             }
             else
-                ProcessNalUnit(byteSegment, false);
+                ProcessNalUnit(frameTimestamp, byteSegment, false, false);
+
+            if (generateFrame && _frameBuffer.CountData != 0)
+            {
+                ArraySegment<byte> frameBytes = _frameBuffer.GetAccumulatedBytes();
+                TryGenerateFrame(frameTimestamp, frameBytes);
+            }
         }
 
-        public void GenerateFrame(DateTime frameTimestamp)
+        private void TryGenerateFrame(DateTime frameTimestamp, ArraySegment<byte> frameBytes)
         {
-            if (_frameBuffer.CountData == 0)
-                return;
-
             if (_updateSpsPpsBytes)
             {
                 UpdateSpsPpsBytes();
@@ -64,15 +68,10 @@ namespace RtspClientSharp.MediaParsers
             }
 
             if (_sliceType == -1 || _spsPpsBytes.Length == 0)
-            {
-                _frameBuffer.ResetState();
                 return;
-            }
 
-            FrameType frameType = GetFrameTypeFrom(_sliceType);
+            FrameType frameType = GetFrameType(_sliceType);
             _sliceType = -1;
-
-            ArraySegment<byte> frameBytes = _frameBuffer.GetAccumulatedBytes();
 
             if (frameType == FrameType.PredictionFrame && !_waitForIFrame)
             {
@@ -97,10 +96,11 @@ namespace RtspClientSharp.MediaParsers
 
         private void SlicerOnNalUnitFound(ArraySegment<byte> byteSegment)
         {
-            ProcessNalUnit(byteSegment, true);
+            ProcessNalUnit(DateTime.MinValue, byteSegment, true, false);
         }
 
-        private void ProcessNalUnit(ArraySegment<byte> byteSegment, bool hasStartMarker)
+        private void ProcessNalUnit(DateTime frameTimestamp, ArraySegment<byte> byteSegment, bool hasStartMarker,
+            bool generateFrame)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
@@ -133,10 +133,15 @@ namespace RtspClientSharp.MediaParsers
             if (nri || nalUnitType == 6)
                 return;
 
-            if (!hasStartMarker)
-                _frameBuffer.AddBytes(StartMarkerSegment);
+            if (generateFrame && _frameBuffer.CountData == 0)
+                TryGenerateFrame(frameTimestamp, byteSegment);
+            else
+            {
+                if (!hasStartMarker)
+                    _frameBuffer.AddBytes(StartMarkerSegment);
 
-            _frameBuffer.AddBytes(byteSegment);
+                _frameBuffer.AddBytes(byteSegment);
+            }
         }
 
         private void ParseSps(ArraySegment<byte> byteSegment, bool hasStartMarker)
@@ -250,7 +255,7 @@ namespace RtspClientSharp.MediaParsers
             return nalSliceType;
         }
 
-        private static FrameType GetFrameTypeFrom(int sliceType)
+        private static FrameType GetFrameType(int sliceType)
         {
             if (sliceType == 0 || sliceType == 5)
                 return FrameType.PredictionFrame;

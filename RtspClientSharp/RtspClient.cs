@@ -153,11 +153,13 @@ namespace RtspClientSharp
 
                         if (result.IsCanceled)
                         {
-                            if(ConnectionParameters.CancelTimeout != TimeSpan.Zero)
+                            if (ConnectionParameters.CancelTimeout == TimeSpan.Zero ||
                                 await Task.WhenAny(receiveInternalTask,
-                                    Task.Delay(ConnectionParameters.CancelTimeout, CancellationToken.None));
+                                    Task.Delay(ConnectionParameters.CancelTimeout, CancellationToken.None)) !=
+                                receiveInternalTask)
+                                _rtspClientInternal.Dispose();
 
-                            receiveInternalTask.IgnoreExceptions();
+                            await Task.WhenAny(receiveInternalTask);
                             throw new OperationCanceledException();
                         }
 

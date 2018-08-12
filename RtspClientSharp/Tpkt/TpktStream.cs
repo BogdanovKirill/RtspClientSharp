@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using RtspClientSharp.Utils;
 
@@ -76,9 +77,11 @@ namespace RtspClientSharp.Tpkt
             int packetSize = TpktHeader.Size + payloadSegment.Count;
 
             if (_writeBuffer.Length < packetSize)
+            {
                 _writeBuffer = new byte[packetSize];
+                _writeBuffer[0] = TpktHeader.Id;
+            }
 
-            _writeBuffer[0] = TpktHeader.Id;
             _writeBuffer[1] = (byte) channel;
             _writeBuffer[2] = (byte) (payloadSegment.Count >> 8);
             _writeBuffer[3] = (byte) payloadSegment.Count;
@@ -86,8 +89,7 @@ namespace RtspClientSharp.Tpkt
             Buffer.BlockCopy(payloadSegment.Array, payloadSegment.Offset, _writeBuffer, TpktHeader.Size,
                 payloadSegment.Count);
 
-            int write = 4 + payloadSegment.Count;
-            await _stream.WriteAsync(_writeBuffer, 0, write);
+            await _stream.WriteAsync(_writeBuffer, 0, packetSize);
         }
 
         private async Task<int> FindNextPacketAsync()
@@ -107,6 +109,7 @@ namespace RtspClientSharp.Tpkt
             return packetPosition;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int FindTpktSignature(int dataSize)
         {
             if (dataSize == 0)
