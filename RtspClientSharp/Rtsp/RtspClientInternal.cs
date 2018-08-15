@@ -226,7 +226,7 @@ namespace RtspClientSharp.Rtsp
             else
             {
                 int channelCounter = _streamsMap.Count;
-                rtpChannelNumber = ++channelCounter;
+                rtpChannelNumber = channelCounter;
                 rtcpChannelNumber = ++channelCounter;
 
                 setupRequest = _requestMessageFactory.CreateSetupTcpInterleavedRequest(track.TrackName,
