@@ -5,20 +5,31 @@ namespace RtspClientSharp.Rtsp
 {
     class RtspRequestMessage : RtspMessage
     {
+        private readonly Func<uint> _cSeqProvider;
+
         public RtspMethod Method { get; }
         public Uri ConnectionUri { get; }
         public string UserAgent { get; }
 
-        public RtspRequestMessage(RtspMethod method, Uri connectionUri, Version protocolVersion, uint cSeq,
+        public RtspRequestMessage(RtspMethod method, Uri connectionUri, Version protocolVersion, Func<uint> cSeqProvider,
             string userAgent, string session)
-            : base(cSeq, protocolVersion)
+            : base(cSeqProvider(), protocolVersion)
         {
             Method = method;
             ConnectionUri = connectionUri;
+            _cSeqProvider = cSeqProvider;
             UserAgent = userAgent;
 
             if (!string.IsNullOrEmpty(session))
                 Headers.Add("Session", session);
+        }
+        
+        public void UpdateSequenceNumber()
+        {
+            if (_cSeqProvider == null)
+                throw new InvalidOperationException("CSeq provider is not set");
+
+            CSeq = _cSeqProvider();
         }
 
         public override string ToString()

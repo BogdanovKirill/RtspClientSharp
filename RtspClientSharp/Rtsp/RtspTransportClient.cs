@@ -60,7 +60,7 @@ namespace RtspClientSharp.Rtsp
                 throw new RtspBadResponseCodeException(responseMessage.StatusCode);
 
             _authenticator = Authenticator.Create(ConnectionParameters.Credentials, authenticateHeader);
-            requestMessage.CSeq++;
+            requestMessage.UpdateSequenceNumber();
 
             await SendRequestAsync(requestMessage, token);
             responseMessage = await GetResponseAsync();
