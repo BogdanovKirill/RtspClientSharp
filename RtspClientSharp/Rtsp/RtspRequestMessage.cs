@@ -26,9 +26,6 @@ namespace RtspClientSharp.Rtsp
         
         public void UpdateSequenceNumber()
         {
-            if (_cSeqProvider == null)
-                throw new InvalidOperationException("CSeq provider is not set");
-
             CSeq = _cSeqProvider();
         }
 
