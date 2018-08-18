@@ -21,15 +21,15 @@ namespace RtspClientSharp.Rtsp
 
         public RtspRequestMessage CreateOptionsRequest()
         {
-            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.OPTIONS, _rtspUri, ProtocolVersion, ++_cSeq,
-                _userAgent, SessionId);
+            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.OPTIONS, _rtspUri, ProtocolVersion, 
+                NextCSeqProvider, _userAgent, SessionId);
             return rtspRequestMessage;
         }
 
         public RtspRequestMessage CreateDescribeRequest()
         {
-            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.DESCRIBE, _rtspUri, ProtocolVersion, ++_cSeq,
-                _userAgent, SessionId);
+            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.DESCRIBE, _rtspUri, ProtocolVersion, 
+                NextCSeqProvider, _userAgent, SessionId);
             rtspRequestMessage.Headers.Add("Accept", "application/sdp");
             return rtspRequestMessage;
         }
@@ -40,8 +40,8 @@ namespace RtspClientSharp.Rtsp
                 ? new Uri(GetContentBasedUri(), trackName)
                 : new Uri(trackName, UriKind.Absolute);
 
-            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.SETUP, trackUri, ProtocolVersion, ++_cSeq,
-                _userAgent, SessionId);
+            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.SETUP, trackUri, ProtocolVersion, 
+                NextCSeqProvider, _userAgent, SessionId);
             rtspRequestMessage.Headers.Add("Transport", $"RTP/AVP/TCP;unicast;interleaved={rtpChannel}-{rtcpChannel}");
             return rtspRequestMessage;
         }
@@ -52,9 +52,9 @@ namespace RtspClientSharp.Rtsp
                 ? new Uri(GetContentBasedUri(), trackName)
                 : new Uri(trackName, UriKind.Absolute);
 
-            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.SETUP, trackUri, ProtocolVersion, ++_cSeq,
-                _userAgent, SessionId);
-            rtspRequestMessage.Headers.Add("Transport", $"RTP/AVP;unicast;client_port={rtpPort}-{rtcpPort}");
+            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.SETUP, trackUri, ProtocolVersion, 
+                NextCSeqProvider, _userAgent, SessionId);
+            rtspRequestMessage.Headers.Add("Transport", $"RTP/AVP/UDP;unicast;client_port={rtpPort}-{rtcpPort}");
             return rtspRequestMessage;
         }
 
@@ -63,22 +63,22 @@ namespace RtspClientSharp.Rtsp
             Uri uri = GetContentBasedUri();
 
             var rtspRequestMessage =
-                new RtspRequestMessage(RtspMethod.PLAY, uri, ProtocolVersion, ++_cSeq, _userAgent, SessionId);
+                new RtspRequestMessage(RtspMethod.PLAY, uri, ProtocolVersion, NextCSeqProvider, _userAgent, SessionId);
             rtspRequestMessage.Headers.Add("Range", "npt=0.000-");
             return rtspRequestMessage;
         }
 
         public RtspRequestMessage CreateTeardownRequest()
         {
-            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.TEARDOWN, _rtspUri, ProtocolVersion, ++_cSeq,
-                _userAgent, SessionId);
+            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.TEARDOWN, _rtspUri, ProtocolVersion, 
+                NextCSeqProvider, _userAgent, SessionId);
             return rtspRequestMessage;
         }
 
         public RtspRequestMessage CreateGetParameterRequest()
         {
             var rtspRequestMessage = new RtspRequestMessage(RtspMethod.GET_PARAMETER, _rtspUri, ProtocolVersion,
-                ++_cSeq, _userAgent, SessionId);
+                NextCSeqProvider, _userAgent, SessionId);
             return rtspRequestMessage;
         }
 
@@ -88,6 +88,11 @@ namespace RtspClientSharp.Rtsp
                 return ContentBase;
 
             return _rtspUri;
+        }
+
+        private uint NextCSeqProvider()
+        {
+            return ++_cSeq;
         }
     }
 }

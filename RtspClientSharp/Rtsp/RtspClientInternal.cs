@@ -253,6 +253,11 @@ namespace RtspClientSharp.Rtsp
                 rtpClient?.Connect(new IPEndPoint(remoteEndPoint.Address, rtpChannelNumber));
                 rtcpClient?.Connect(new IPEndPoint(remoteEndPoint.Address, rtcpChannelNumber));
 
+                var udpHolePunchingPacketSegment = new ArraySegment<byte>(Array.Empty<byte>());
+
+                await rtpClient.SendAsync(udpHolePunchingPacketSegment, SocketFlags.None);
+                await rtcpClient.SendAsync(udpHolePunchingPacketSegment, SocketFlags.None);
+
                 _udpClientsMap[rtpChannelNumber] = rtpClient;
                 _udpClientsMap[rtcpChannelNumber] = rtcpClient;
             }

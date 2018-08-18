@@ -18,12 +18,9 @@
 	<RequireLicenseAcceptance>false</RequireLicenseAcceptance>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
     <Copyright>Copyright ©2018 Kirill Bogdanov</Copyright>
-    <Version>1.2.1</Version>
-    <PackageReleaseNotes>-Small performance optimizations are made
--H264 parsing speed is increased (avoid constant memory copying when possible)
--Multi-threaded bugs are fixed
--Fixed bug in RTSP over TCP when on some cameras were constant receive timeouts
--RTCP reports minimum delay is increased up to 5 seconds to match RFC 3550</PackageReleaseNotes>
+    <Version>1.2.2</Version>
+    <PackageReleaseNotes>-RTSP over UDP could work through Internet
+-Small fixes with CSeq in RTSP code</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 

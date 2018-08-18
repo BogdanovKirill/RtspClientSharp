@@ -5,7 +5,7 @@ namespace RtspClientSharp.Rtsp
 {
     abstract class RtspMessage
     {
-        public uint CSeq { get; set; }
+        public uint CSeq { get; protected set; }
         public Version ProtocolVersion { get; }
         public NameValueCollection Headers { get; }
 
