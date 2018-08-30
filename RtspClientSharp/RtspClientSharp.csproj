@@ -6,7 +6,7 @@
     <Authors>Kirill Bogdanov</Authors>
     <RepositoryUrl>https://github.com/BogdanovKirill/RtspClientSharp</RepositoryUrl>
     <PackageTags>rtsp, rtp, rtcp</PackageTags>
-    <Description>RTSP Client for .NET
+    <Description>C# RTSP Client for .NET
 
 - Supported transport protocols: TCP/HTTP/UDP
 - Supported media codecs: H.264/MJPEG/AAC/G711A/G711U/PCM/G726
@@ -18,9 +18,8 @@
 	<RequireLicenseAcceptance>false</RequireLicenseAcceptance>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
     <Copyright>Copyright ©2018 Kirill Bogdanov</Copyright>
-    <Version>1.2.2</Version>
-    <PackageReleaseNotes>-RTSP over UDP could work through Internet
--Small fixes with CSeq in RTSP code</PackageReleaseNotes>
+    <Version>1.2.3</Version>
+    <PackageReleaseNotes>-Small bug fix: track URI building logic for SETUP request is improved. It could solve connection problems with several cameras</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 

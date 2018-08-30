@@ -36,9 +36,7 @@ namespace RtspClientSharp.Rtsp
 
         public RtspRequestMessage CreateSetupTcpInterleavedRequest(string trackName, int rtpChannel, int rtcpChannel)
         {
-            Uri trackUri = !Uri.IsWellFormedUriString(trackName, UriKind.Absolute)
-                ? new Uri(GetContentBasedUri(), trackName)
-                : new Uri(trackName, UriKind.Absolute);
+            Uri trackUri = GetTrackUri(trackName);
 
             var rtspRequestMessage = new RtspRequestMessage(RtspMethod.SETUP, trackUri, ProtocolVersion, 
                 NextCSeqProvider, _userAgent, SessionId);
@@ -48,9 +46,7 @@ namespace RtspClientSharp.Rtsp
 
         public RtspRequestMessage CreateSetupUdpUnicastRequest(string trackName, int rtpPort, int rtcpPort)
         {
-            Uri trackUri = !Uri.IsWellFormedUriString(trackName, UriKind.Absolute)
-                ? new Uri(GetContentBasedUri(), trackName)
-                : new Uri(trackName, UriKind.Absolute);
+            Uri trackUri = GetTrackUri(trackName);
 
             var rtspRequestMessage = new RtspRequestMessage(RtspMethod.SETUP, trackUri, ProtocolVersion, 
                 NextCSeqProvider, _userAgent, SessionId);
@@ -93,6 +89,26 @@ namespace RtspClientSharp.Rtsp
         private uint NextCSeqProvider()
         {
             return ++_cSeq;
+        }
+        
+        private Uri GetTrackUri(string trackName)
+        {
+            Uri trackUri;
+
+            if (!Uri.IsWellFormedUriString(trackName, UriKind.Absolute))
+            {
+                var uriBuilder = new UriBuilder(GetContentBasedUri());
+                if (uriBuilder.Path.EndsWith("/"))
+                    uriBuilder.Path += trackName;
+                else
+                    uriBuilder.Path += "/" + trackName;
+
+                trackUri = uriBuilder.Uri;
+            }
+            else
+                trackUri = new Uri(trackName, UriKind.Absolute);
+
+            return trackUri;
         }
     }
 }
