@@ -21,8 +21,7 @@ namespace RtspClientSharp.Rtsp.Authentication
             {
                 int commaIndex = qop.IndexOf(',');
 
-                if (commaIndex != -1)
-                    _qop = qop.Substring(0, commaIndex);
+                _qop = commaIndex != -1 ? qop.Substring(0, commaIndex) : qop;
             }
 
             uint cnonce = (uint) Guid.NewGuid().GetHashCode();
