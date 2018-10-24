@@ -71,4 +71,4 @@ https://github.com/BogdanovKirill/RtspClientSharp/tree/master/Examples
 If this project help you reduce time to develop, you can give me a cup of coffee :) 
 You could also make per-feature donations
 
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=netkill%40bk%2eru&lc=RU&item_name=RtspClientSharp&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://paypal.me/bogdanovkv)
