@@ -18,8 +18,8 @@
 	<RequireLicenseAcceptance>false</RequireLicenseAcceptance>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
     <Copyright>Copyright ©2018 Kirill Bogdanov</Copyright>
-    <Version>1.2.3</Version>
-    <PackageReleaseNotes>-Small bug fix: track URI building logic for SETUP request is improved. It could solve connection problems with several cameras</PackageReleaseNotes>
+    <Version>1.2.4</Version>
+    <PackageReleaseNotes>-Small bug fix: QOP is not set in digest authenticator when it's value doesn't have comma</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
