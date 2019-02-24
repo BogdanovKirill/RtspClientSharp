@@ -5,7 +5,6 @@ dist: xenial
 dotnet: 2.2
 script:
     - dotnet restore
-    - dotnet build
     - dotnet test ./RtspClientSharp.UnitTests -c Release -f netcoreapp2.0
 global:
     - DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true
