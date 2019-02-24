@@ -17,9 +17,13 @@
     <PackageLicenseUrl>https://raw.githubusercontent.com/BogdanovKirill/RtspClientSharp/master/LICENSE.md?raw=true</PackageLicenseUrl>
 	<RequireLicenseAcceptance>false</RequireLicenseAcceptance>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
-    <Copyright>Copyright ©2018 Kirill Bogdanov</Copyright>
-    <Version>1.2.4</Version>
-    <PackageReleaseNotes>-Small bug fix: QOP is not set in digest authenticator when it's value doesn't have comma</PackageReleaseNotes>
+    <Copyright>Copyright ©2019 Kirill Bogdanov</Copyright>
+    <Version>1.2.5</Version>
+    <PackageReleaseNotes>-Bug fix for Grandstream GXV3674_FHD_VF cameras
+
+The problem is described here:
+https://github.com/BogdanovKirill/RtspClientSharp/issues/18
+We can't use LastIndexOfBytes method to separate headers from body in response, because CRLF delimiter could be found in body's bytes</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
