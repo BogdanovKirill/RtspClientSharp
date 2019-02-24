@@ -105,27 +105,5 @@ namespace RtspClientSharp.UnitTests.Utils
 
             Assert.AreEqual(-1, index);
         }
-
-        [TestMethod]
-        public void LastIndexOfBytes_PatternExists_ReturnsActualIndex()
-        {
-            var pattern = new Byte[] { 1, 2, 3 };
-            var bytes = new byte[] { 0, 5, 6, 7, 1, 2, 3 };
-
-            int index = ArrayUtils.LastIndexOfBytes(bytes, pattern, 1, bytes.Length - 1);
-
-            Assert.AreEqual(4, index);
-        }
-
-        [TestMethod]
-        public void LastIndexOfBytes_PatternNotExists_ReturnsMinusOne()
-        {
-            var pattern = new Byte[] { 1, 2, 3 };
-            var bytes = new byte[] { 0, 5, 6, 7, 1, 2 };
-
-            int index = ArrayUtils.LastIndexOfBytes(bytes, pattern, 1, bytes.Length - 1);
-
-            Assert.AreEqual(-1, index);
-        }
     }
 }
