@@ -99,7 +99,7 @@ namespace RtspClientSharp.Rtsp
             if (startOfResponse == -1)
                 throw new RtspBadResponseException("\"RTSP\" start signature is not found");
 
-            int endOfResponseHeaders = ArrayUtils.LastIndexOfBytes(_buffer, Constants.DoubleCrlfBytes, 0, totalRead) +
+            int endOfResponseHeaders = ArrayUtils.IndexOfBytes(_buffer, Constants.DoubleCrlfBytes, 0, totalRead) +
                                        Constants.DoubleCrlfBytes.Length;
 
             if (endOfResponseHeaders == -1)
@@ -162,7 +162,7 @@ namespace RtspClientSharp.Rtsp
                 if (startIndex < 0)
                     startIndex = 0;
 
-                endOfHeaders = ArrayUtils.LastIndexOfBytes(_buffer, Constants.DoubleCrlfBytes, startIndex,
+                endOfHeaders = ArrayUtils.IndexOfBytes(_buffer, Constants.DoubleCrlfBytes, startIndex,
                     totalRead - startIndex);
 
                 offset += read;

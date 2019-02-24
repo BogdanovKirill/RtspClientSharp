@@ -214,7 +214,7 @@ namespace RtspClientSharp.Rtsp
                 if (startIndex < 0)
                     startIndex = 0;
 
-                endOfHeaders = ArrayUtils.LastIndexOfBytes(buffer, Constants.DoubleCrlfBytes, startIndex,
+                endOfHeaders = ArrayUtils.IndexOfBytes(buffer, Constants.DoubleCrlfBytes, startIndex,
                     totalRead - startIndex);
 
                 offset += read;
