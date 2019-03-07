@@ -5,6 +5,8 @@ namespace RtspClientSharp.Utils
     static class NetworkClientFactory
     {
         private const int TcpReceiveBufferDefaultSize = 64 * 1024;
+        private const int SIO_UDP_CONNRESET = -1744830452;
+        private static readonly byte[] EmptyOptionInValue = { 0, 0, 0, 0 };
 
         public static Socket CreateTcpClient()
         {
@@ -24,6 +26,7 @@ namespace RtspClientSharp.Utils
                 SendBufferSize = 0,
                 DualMode = true
             };
+            socket.IOControl((IOControlCode)SIO_UDP_CONNRESET, EmptyOptionInValue, null);
             return socket;
         }
     }
