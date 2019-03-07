@@ -13,6 +13,7 @@ namespace RtspClientSharp.Utils
         private readonly int _maxNumberOfChunks;
         private byte[] _chunksBytes = Array.Empty<byte>();
         private readonly List<int> _sizesList;
+        private readonly Stack<int> _freeChunks;
         private int _chunksCount;
 
         public int Count => _chunksCount;
@@ -22,6 +23,7 @@ namespace RtspClientSharp.Utils
             _maxChunkSize = maxChunkSize;
             _maxNumberOfChunks = maxNumberOfChunks;
             _sizesList = new List<int>(maxNumberOfChunks);
+            _freeChunks = new Stack<int>(maxNumberOfChunks);
         }
 
         public ArraySegment<byte> this[int index]
@@ -33,7 +35,7 @@ namespace RtspClientSharp.Utils
             }
         }
 
-        public void Add(ArraySegment<byte> chunkSegment)
+        public int Insert(ArraySegment<byte> chunkSegment)
         {
             Debug.Assert(chunkSegment.Array != null, "chunkSegment.Array != null");
 
@@ -42,34 +44,46 @@ namespace RtspClientSharp.Utils
             if (_chunksCount == _maxNumberOfChunks)
                 throw new InvalidOperationException("Number of chunks is reached the upper limit");
 
-            int requiredSize = ++_chunksCount * _maxChunkSize;
+            int index;
+            int offset;
 
-            if (_chunksBytes.Length < requiredSize)
-                Array.Resize(ref _chunksBytes, requiredSize);
+            if (_freeChunks.Count != 0)
+            {
+                index = _freeChunks.Pop();
+                offset = index * _maxChunkSize;
 
-            int offset = requiredSize - _maxChunkSize;
+                _sizesList[index] = chunkSegment.Count;
+                ++_chunksCount;
+            }
+            else
+            {
+                index = _chunksCount;
+
+                int requiredSize = ++_chunksCount * _maxChunkSize;
+
+                if (_chunksBytes.Length < requiredSize)
+                    Array.Resize(ref _chunksBytes, requiredSize);
+
+                offset = requiredSize - _maxChunkSize;
+
+                _sizesList.Add(chunkSegment.Count);
+            }
+
             Buffer.BlockCopy(chunkSegment.Array, chunkSegment.Offset, _chunksBytes, offset, chunkSegment.Count);
-
-            _sizesList.Add(chunkSegment.Count);
+            return index;
         }
 
         public void RemoveAt(int index)
         {
-            _sizesList.RemoveAt(index);
             --_chunksCount;
 
-            if (index < _chunksCount)
-            {
-                int dstOffset = index * _maxChunkSize;
-                int srcOffset = dstOffset + _maxChunkSize;
-                int copyCount = _chunksCount * _maxChunkSize - dstOffset;
-
-                Buffer.BlockCopy(_chunksBytes, srcOffset, _chunksBytes, dstOffset, copyCount);
-            }
+            _freeChunks.Push(index);
+            _sizesList[index] = 0;
         }
 
         public void Clear()
         {
+            _freeChunks.Clear();
             _sizesList.Clear();
             _chunksCount = 0;
         }

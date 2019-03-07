@@ -275,7 +275,7 @@ namespace RtspClientSharp.Rtsp
             }
             else
             {
-                rtpSequenceAssembler = new RtpSequenceAssembler(Constants.UdpReceiveBufferSize, 8);
+                rtpSequenceAssembler = new RtpSequenceAssembler(Constants.UdpReceiveBufferSize, 256);
                 mediaPayloadParser.FrameGenerated = OnFrameGeneratedThreadSafe;
             }
 

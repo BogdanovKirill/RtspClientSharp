@@ -9,7 +9,9 @@ namespace RtspClientSharp.Rtp
         private readonly ChunksArray _chunksArray;
         private readonly int _maxCorrectionLength;
         private ushort _previousCorrectSeqNumber;
+        private uint _previousTimestamp;
         private readonly List<RtpPacket> _bufferedRtpPackets;
+        private readonly List<int> _rtpPacketIndexToChunkIndexMap = new List<int>();
         private readonly List<int> _removeList;
         private bool _isFirstPacket = true;
 
@@ -34,6 +36,7 @@ namespace RtspClientSharp.Rtp
             if (_isFirstPacket)
             {
                 _previousCorrectSeqNumber = rtpPacket.SeqNumber;
+                _previousTimestamp = rtpPacket.Timestamp;
                 PacketPassed?.Invoke(ref rtpPacket);
                 _isFirstPacket = false;
                 return;
@@ -44,6 +47,7 @@ namespace RtspClientSharp.Rtp
             if (delta == 1)
             {
                 _previousCorrectSeqNumber = rtpPacket.SeqNumber;
+                _previousTimestamp = rtpPacket.Timestamp;
                 PacketPassed?.Invoke(ref rtpPacket);
 
                 if (_bufferedRtpPackets.Count == 0)
@@ -54,12 +58,13 @@ namespace RtspClientSharp.Rtp
                 return;
             }
 
-            if (delta > _maxCorrectionLength)
+            if (_previousTimestamp != rtpPacket.Timestamp || delta > _maxCorrectionLength)
             {
                 while (_bufferedRtpPackets.Count != 0)
                     PassNearestBufferedPacket();
 
                 _previousCorrectSeqNumber = rtpPacket.SeqNumber;
+                _previousTimestamp = rtpPacket.Timestamp;
                 PacketPassed?.Invoke(ref rtpPacket);
             }
             else
@@ -68,7 +73,8 @@ namespace RtspClientSharp.Rtp
                     return;
 
                 _bufferedRtpPackets.Add(rtpPacket);
-                _chunksArray.Add(rtpPacket.PayloadSegment);
+                int chunkIndex = _chunksArray.Insert(rtpPacket.PayloadSegment);
+                _rtpPacketIndexToChunkIndexMap.Add(chunkIndex);
 
                 if (_bufferedRtpPackets.Count != _maxCorrectionLength)
                     return;
@@ -97,13 +103,17 @@ namespace RtspClientSharp.Rtp
             }
 
             RtpPacket nearestRtpPacket = _bufferedRtpPackets[nearestIndex];
-            nearestRtpPacket.PayloadSegment = _chunksArray[nearestIndex];
 
-            _previousCorrectSeqNumber = _bufferedRtpPackets[nearestIndex].SeqNumber;
+            int chunkIndex = _rtpPacketIndexToChunkIndexMap[nearestIndex];
+            nearestRtpPacket.PayloadSegment = _chunksArray[chunkIndex];
+
+            _previousCorrectSeqNumber = nearestRtpPacket.SeqNumber;
+            _previousTimestamp = nearestRtpPacket.Timestamp;
             PacketPassed?.Invoke(ref nearestRtpPacket);
 
             _bufferedRtpPackets.RemoveAt(nearestIndex);
-            _chunksArray.RemoveAt(nearestIndex);
+            _chunksArray.RemoveAt(chunkIndex);
+            _rtpPacketIndexToChunkIndexMap.RemoveAt(nearestIndex);
         }
 
         private void ProcessBufferedPackets(ushort nextSeqNumber)
@@ -118,9 +128,12 @@ namespace RtspClientSharp.Rtp
                         continue;
 
                     RtpPacket nextRtpPacket = _bufferedRtpPackets[i];
-                    nextRtpPacket.PayloadSegment = _chunksArray[i];
+
+                    int chunkIndex = _rtpPacketIndexToChunkIndexMap[i];               
+                    nextRtpPacket.PayloadSegment = _chunksArray[chunkIndex];
 
                     _previousCorrectSeqNumber = nextRtpPacket.SeqNumber;
+                    _previousTimestamp = nextRtpPacket.Timestamp;
                     PacketPassed?.Invoke(ref nextRtpPacket);
 
                     ++nextSeqNumber;
@@ -139,6 +152,7 @@ namespace RtspClientSharp.Rtp
             {
                 _bufferedRtpPackets.Clear();
                 _chunksArray.Clear();
+                _rtpPacketIndexToChunkIndexMap.Clear();
             }
             else
             {
@@ -147,7 +161,8 @@ namespace RtspClientSharp.Rtp
                     int removeIndex = _removeList[0];
 
                     _bufferedRtpPackets.RemoveAt(removeIndex);
-                    _chunksArray.RemoveAt(removeIndex);
+                    _chunksArray.RemoveAt(_rtpPacketIndexToChunkIndexMap[removeIndex]);
+                    _rtpPacketIndexToChunkIndexMap.RemoveAt(removeIndex);
                 }
                 else
                 {
@@ -158,7 +173,8 @@ namespace RtspClientSharp.Rtp
                         int removeIndex = _removeList[i];
 
                         _bufferedRtpPackets.RemoveAt(removeIndex);
-                        _chunksArray.RemoveAt(removeIndex);
+                        _chunksArray.RemoveAt(_rtpPacketIndexToChunkIndexMap[removeIndex]);
+                        _rtpPacketIndexToChunkIndexMap.RemoveAt(removeIndex);
                     }
                 }
             }
