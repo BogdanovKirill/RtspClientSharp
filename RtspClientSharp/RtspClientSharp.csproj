@@ -18,12 +18,12 @@
 	<RequireLicenseAcceptance>false</RequireLicenseAcceptance>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
     <Copyright>Copyright ©2019 Kirill Bogdanov</Copyright>
-    <Version>1.2.5</Version>
-    <PackageReleaseNotes>-Bug fix for Grandstream GXV3674_FHD_VF cameras
+    <Version>1.2.6</Version>
+    <PackageReleaseNotes>-Bug fix: ConnectionReset on an UDP socket
 
 The problem is described here:
-https://github.com/BogdanovKirill/RtspClientSharp/issues/18
-We can't use LastIndexOfBytes method to separate headers from body in response, because CRLF delimiter could be found in body's bytes</PackageReleaseNotes>
+https://github.com/BogdanovKirill/RtspClientSharp/issues/21
+We could avoid this by setting SIO_UDP_CONNRESET option to 0 for socket.</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
