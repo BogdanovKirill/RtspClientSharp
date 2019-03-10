@@ -98,10 +98,13 @@ namespace RtspClientSharp.Rtsp
             if (!Uri.IsWellFormedUriString(trackName, UriKind.Absolute))
             {
                 var uriBuilder = new UriBuilder(GetContentBasedUri());
+
+                bool trackNameStartsWithSlash = trackName.StartsWith("/");
+
                 if (uriBuilder.Path.EndsWith("/"))
-                    uriBuilder.Path += trackName;
+                    uriBuilder.Path += trackNameStartsWithSlash ? trackName.Substring(1) : trackName;
                 else
-                    uriBuilder.Path += "/" + trackName;
+                    uriBuilder.Path += trackNameStartsWithSlash ? trackName : "/" + trackName;
 
                 trackUri = uriBuilder.Uri;
             }
