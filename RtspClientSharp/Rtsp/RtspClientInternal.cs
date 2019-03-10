@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -22,6 +23,7 @@ namespace RtspClientSharp.Rtsp
     sealed class RtspClientInternal : IDisposable
     {
         private const int RtcpReportIntervalBaseMs = 5000;
+        private static readonly char[] TransportAttributesSeparator = { ';' };
 
         private readonly ConnectionParameters _connectionParameters;
         private readonly Func<IRtspTransportClient> _transportClientProvider;
@@ -196,7 +198,7 @@ namespace RtspClientSharp.Rtsp
                     IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
                     rtpClient.Bind(endPoint);
 
-                    int rtpPort = ((IPEndPoint) rtpClient.LocalEndPoint).Port;
+                    int rtpPort = ((IPEndPoint)rtpClient.LocalEndPoint).Port;
 
                     endPoint = new IPEndPoint(IPAddress.Any, rtpPort + 1);
 
@@ -210,7 +212,7 @@ namespace RtspClientSharp.Rtsp
                         rtcpClient.Bind(endPoint);
                     }
 
-                    int rtcpPort = ((IPEndPoint) rtcpClient.LocalEndPoint).Port;
+                    int rtcpPort = ((IPEndPoint)rtcpClient.LocalEndPoint).Port;
 
                     setupRequest = _requestMessageFactory.CreateSetupUdpUnicastRequest(track.TrackName,
                         rtpPort, rtcpPort);
@@ -239,19 +241,33 @@ namespace RtspClientSharp.Rtsp
             if (string.IsNullOrEmpty(transportHeader))
                 throw new RtspBadResponseException("Transport header is not found");
 
-            string attributeName = _connectionParameters.RtpTransport == RtpTransportProtocol.UDP
+            string portsAttributeName = _connectionParameters.RtpTransport == RtpTransportProtocol.UDP
                 ? "server_port"
                 : "interleaved";
 
-            if (!ParseSeverPorts(transportHeader, attributeName, out rtpChannelNumber, out rtcpChannelNumber))
+            string[] transportAttributes = transportHeader.Split(TransportAttributesSeparator, StringSplitOptions.RemoveEmptyEntries);
+
+            string portsAttribute = transportAttributes.FirstOrDefault(a => a.StartsWith(portsAttributeName, StringComparison.InvariantCultureIgnoreCase));
+
+            if (portsAttribute == null || !TryParseSeverPorts(portsAttribute, out rtpChannelNumber, out rtcpChannelNumber))
                 throw new RtspBadResponseException("Server ports are not found");
 
             if (_connectionParameters.RtpTransport == RtpTransportProtocol.UDP)
             {
-                IPEndPoint remoteEndPoint = (IPEndPoint) _rtspTransportClient.RemoteEndPoint;
+                string sourceAttribute = transportAttributes.FirstOrDefault(a => a.StartsWith("source", StringComparison.InvariantCultureIgnoreCase));
+                int equalSignIndex;
 
-                rtpClient?.Connect(new IPEndPoint(remoteEndPoint.Address, rtpChannelNumber));
-                rtcpClient?.Connect(new IPEndPoint(remoteEndPoint.Address, rtcpChannelNumber));
+                IPAddress sourceAddress;
+
+                if (sourceAttribute != null && (equalSignIndex = sourceAttribute.IndexOf("=", StringComparison.CurrentCultureIgnoreCase)) != -1)
+                    sourceAddress = IPAddress.Parse(sourceAttribute.Substring(++equalSignIndex).Trim());
+                else
+                    sourceAddress = ((IPEndPoint)_rtspTransportClient.RemoteEndPoint).Address;
+
+                Debug.Assert(rtpClient != null, nameof(rtpClient) + " != null");
+                rtpClient.Connect(new IPEndPoint(sourceAddress, rtpChannelNumber));
+                Debug.Assert(rtcpClient != null, nameof(rtcpClient) + " != null");
+                rtcpClient.Connect(new IPEndPoint(sourceAddress, rtcpChannelNumber));
 
                 var udpHolePunchingPacketSegment = new ArraySegment<byte>(Array.Empty<byte>());
 
@@ -286,7 +302,7 @@ namespace RtspClientSharp.Rtsp
             rtcpStream.SessionShutdown += (sender, args) => _serverCancellationTokenSource.Cancel();
             _streamsMap.Add(rtcpChannelNumber, rtcpStream);
 
-            uint senderSyncSourceId = (uint) _random.Next();
+            uint senderSyncSourceId = (uint)_random.Next();
 
             var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStream, rtcpStream, senderSyncSourceId);
             _reportProvidersMap.Add(rtpChannelNumber, rtcpReportsProvider);
@@ -355,58 +371,50 @@ namespace RtspClientSharp.Rtsp
             if (timeout == 0)
                 timeout = 60;
 
-            _rtspKeepAliveTimeoutMs = (int) (timeout * 1000);
+            _rtspKeepAliveTimeoutMs = (int)(timeout * 1000);
         }
 
-        private bool ParseSeverPorts(string transportHeader, string attributeName, out int rtpPort, out int rtcpPort)
+        private bool TryParseSeverPorts(string portsAttribute, out int rtpPort, out int rtcpPort)
         {
             rtpPort = 0;
             rtcpPort = 0;
 
-            int attributeStartIndex =
-                transportHeader.IndexOf(attributeName, StringComparison.InvariantCultureIgnoreCase);
-
-            if (attributeStartIndex == -1)
-                return false;
-
-            attributeStartIndex += attributeName.Length;
-
-            int equalSignIndex = transportHeader.IndexOf('=', attributeStartIndex);
+            int equalSignIndex = portsAttribute.IndexOf('=');
 
             if (equalSignIndex == -1)
                 return false;
 
             int rtpPortStartIndex = ++equalSignIndex;
 
-            if (rtpPortStartIndex == transportHeader.Length)
+            if (rtpPortStartIndex == portsAttribute.Length)
                 return false;
 
-            while (transportHeader[rtpPortStartIndex] == ' ')
-                if (++rtpPortStartIndex == transportHeader.Length)
+            while (portsAttribute[rtpPortStartIndex] == ' ')
+                if (++rtpPortStartIndex == portsAttribute.Length)
                     return false;
 
-            int hyphenIndex = transportHeader.IndexOf('-', equalSignIndex);
+            int hyphenIndex = portsAttribute.IndexOf('-', equalSignIndex);
 
             if (hyphenIndex == -1)
                 return false;
 
-            string rtpPortValue = transportHeader.Substring(rtpPortStartIndex, hyphenIndex - rtpPortStartIndex);
+            string rtpPortValue = portsAttribute.Substring(rtpPortStartIndex, hyphenIndex - rtpPortStartIndex);
 
             if (!int.TryParse(rtpPortValue, out rtpPort))
                 return false;
 
             int rtcpPortStartIndex = ++hyphenIndex;
 
-            if (rtcpPortStartIndex == transportHeader.Length)
+            if (rtcpPortStartIndex == portsAttribute.Length)
                 return false;
 
             int rtcpPortEndIndex = rtcpPortStartIndex;
 
-            while (transportHeader[rtcpPortEndIndex] != ';')
-                if (++rtcpPortEndIndex == transportHeader.Length)
+            while (portsAttribute[rtcpPortEndIndex] != ';')
+                if (++rtcpPortEndIndex == portsAttribute.Length)
                     break;
 
-            string rtcpPortValue = transportHeader.Substring(rtcpPortStartIndex, rtcpPortEndIndex - rtcpPortStartIndex);
+            string rtcpPortValue = portsAttribute.Substring(rtcpPortStartIndex, rtcpPortEndIndex - rtcpPortStartIndex);
 
             return int.TryParse(rtcpPortValue, out rtcpPort);
         }
@@ -493,19 +501,20 @@ namespace RtspClientSharp.Rtsp
                     stream.Process(payload.PayloadSegment);
 
                 int ticksNow = Environment.TickCount;
-                if (TimeUtils.IsTimeOver(ticksNow, lastTimeRtcpReportsSent, nextRtcpReportInterval))
+
+                if (!TimeUtils.IsTimeOver(ticksNow, lastTimeRtcpReportsSent, nextRtcpReportInterval))
+                    continue;
+
+                lastTimeRtcpReportsSent = ticksNow;
+                nextRtcpReportInterval = GetNextRtcpReportIntervalMs();
+
+                foreach (KeyValuePair<int, RtcpReceiverReportsProvider> pair in _reportProvidersMap)
                 {
-                    lastTimeRtcpReportsSent = ticksNow;
-                    nextRtcpReportInterval = GetNextRtcpReportIntervalMs();
+                    IEnumerable<RtcpPacket> packets = pair.Value.GetReportPackets();
+                    ArraySegment<byte> byteSegment = SerializeRtcpPackets(packets, bufferStream);
+                    int rtcpChannel = pair.Key + 1;
 
-                    foreach (KeyValuePair<int, RtcpReceiverReportsProvider> pair in _reportProvidersMap)
-                    {
-                        IEnumerable<RtcpPacket> packets = pair.Value.GetReportPackets();
-                        ArraySegment<byte> byteSegment = SerializeRtcpPackets(packets, bufferStream);
-                        int rtcpChannel = pair.Key + 1;
-
-                        await _tpktStream.WriteAsync(rtcpChannel, byteSegment);
-                    }
+                    await _tpktStream.WriteAsync(rtcpChannel, byteSegment);
                 }
             }
         }
@@ -521,15 +530,17 @@ namespace RtspClientSharp.Rtsp
 
                 ITransportStream transportStream = _streamsMap[channelNumber];
 
+                Task receiveTask;
+
                 if (transportStream is RtpStream rtpStream)
                 {
                     RtcpReceiverReportsProvider receiverReportsProvider = _reportProvidersMap[channelNumber];
-
-                    Task receiveTask = ReceiveRtpFromUdpAsync(client, rtpStream, receiverReportsProvider, token);
-                    waitList.Add(receiveTask);
+                    receiveTask = ReceiveRtpFromUdpAsync(client, rtpStream, receiverReportsProvider, token);
                 }
                 else
-                    ReceiveRtcpFromUdpAsync(client, transportStream, token).IgnoreExceptions();
+                    receiveTask = ReceiveRtcpFromUdpAsync(client, transportStream, token);
+
+                waitList.Add(receiveTask);
             }
 
             return Task.WhenAll(waitList);
@@ -554,16 +565,16 @@ namespace RtspClientSharp.Rtsp
                 rtpStream.Process(payloadSegment);
 
                 int ticksNow = Environment.TickCount;
-                if (TimeUtils.IsTimeOver(ticksNow, lastTimeRtcpReportsSent, nextRtcpReportInterval))
-                {
-                    lastTimeRtcpReportsSent = ticksNow;
-                    nextRtcpReportInterval = GetNextRtcpReportIntervalMs();
+                if (!TimeUtils.IsTimeOver(ticksNow, lastTimeRtcpReportsSent, nextRtcpReportInterval))
+                    continue;
 
-                    IEnumerable<RtcpPacket> packets = reportsProvider.GetReportPackets();
-                    ArraySegment<byte> byteSegment = SerializeRtcpPackets(packets, bufferStream);
+                lastTimeRtcpReportsSent = ticksNow;
+                nextRtcpReportInterval = GetNextRtcpReportIntervalMs();
 
-                    await client.SendAsync(byteSegment, SocketFlags.None);
-                }
+                IEnumerable<RtcpPacket> packets = reportsProvider.GetReportPackets();
+                ArraySegment<byte> byteSegment = SerializeRtcpPackets(packets, bufferStream);
+
+                await client.SendAsync(byteSegment, SocketFlags.None);
             }
         }
 
@@ -590,7 +601,7 @@ namespace RtspClientSharp.Rtsp
                 report.Serialize(bufferStream);
 
             byte[] streamBuffer = bufferStream.GetBuffer();
-            return new ArraySegment<byte>(streamBuffer, 0, (int) bufferStream.Position);
+            return new ArraySegment<byte>(streamBuffer, 0, (int)bufferStream.Position);
         }
     }
 }

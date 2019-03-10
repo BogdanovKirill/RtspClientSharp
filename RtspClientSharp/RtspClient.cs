@@ -154,9 +154,8 @@ namespace RtspClientSharp
                         if (result.IsCanceled)
                         {
                             if (ConnectionParameters.CancelTimeout == TimeSpan.Zero ||
-                                await Task.WhenAny(receiveInternalTask,
-                                    Task.Delay(ConnectionParameters.CancelTimeout, CancellationToken.None)) !=
-                                receiveInternalTask)
+                                await Task.WhenAny(receiveInternalTask, 
+                                    Task.Delay(ConnectionParameters.CancelTimeout, CancellationToken.None)) != receiveInternalTask)
                                 _rtspClientInternal.Dispose();
 
                             await Task.WhenAny(receiveInternalTask);
@@ -204,8 +203,7 @@ namespace RtspClientSharp
 
             RtspClientInternal rtspClientInternal = Volatile.Read(ref _rtspClientInternal);
 
-            if (rtspClientInternal != null)
-                rtspClientInternal.Dispose();
+            rtspClientInternal?.Dispose();
 
             GC.SuppressFinalize(this);
         }
