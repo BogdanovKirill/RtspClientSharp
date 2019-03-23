@@ -16,39 +16,41 @@
 
         public static bool StartsWith(byte[] array, int offset, int count, byte[] pattern)
         {
-            if (count < pattern.Length)
+            int patternLength = pattern.Length;
+
+            if (count < patternLength)
                 return false;
 
-            for (int i = 0; i < pattern.Length; i++, offset++)
-            {
+            for (int i = 0; i < patternLength; i++, offset++)
                 if (array[offset] != pattern[i])
                     return false;
-            }
 
             return true;
         }
 
         public static bool EndsWith(byte[] array, int offset, int count, byte[] pattern)
         {
-            if (count < pattern.Length)
+            int patternLength = pattern.Length;
+
+            if (count < patternLength)
                 return false;
 
-            offset = offset + count - pattern.Length;
+            offset = offset + count - patternLength;
 
-            for (int i = 0; i < pattern.Length; i++, offset++)
-            {
+            for (int i = 0; i < patternLength; i++, offset++)
                 if (array[offset] != pattern[i])
                     return false;
-            }
 
             return true;
         }
 
         public static int IndexOfBytes(byte[] array, byte[] pattern, int startIndex, int count)
         {
-            if (count < pattern.Length)
-                return -1;
+            int patternLength = pattern.Length;
 
+            if (count < patternLength)
+                return -1;
+            
             int endIndex = startIndex + count;
 
             int foundIndex = 0;
@@ -56,7 +58,7 @@
             {
                 if (array[startIndex] != pattern[foundIndex])
                     foundIndex = 0;
-                else if (++foundIndex == pattern.Length)
+                else if (++foundIndex == patternLength)
                     return startIndex - foundIndex + 1;
             }
 
