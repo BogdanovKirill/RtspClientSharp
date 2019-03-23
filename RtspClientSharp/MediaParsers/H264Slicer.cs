@@ -44,8 +44,7 @@ namespace RtspClientSharp.MediaParsers
                     int nalUnitLength = nextNalUnitStartIndex - nalUnitStartIndex;
 
                     if (nalUnitLength != RawH264Frame.StartMarker.Length)
-                        nalUnitHandler?.Invoke(new ArraySegment<byte>(byteSegment.Array, nalUnitStartIndex,
-                            nalUnitLength));
+                        nalUnitHandler?.Invoke(new ArraySegment<byte>(byteSegment.Array, nalUnitStartIndex,nalUnitLength));
                 }
                 else
                 {

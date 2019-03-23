@@ -19,6 +19,7 @@ namespace RtspClientSharp.MediaParsers
 
         public static readonly ArraySegment<byte> StartMarkerSegment = new ArraySegment<byte>(RawH264Frame.StartMarker);
 
+        private readonly Func<DateTime> _frameTimestampProvider;
         private readonly BitStreamReader _bitStreamReader = new BitStreamReader();
         private readonly Dictionary<int, byte[]> _spsMap = new Dictionary<int, byte[]>();
         private readonly Dictionary<int, byte[]> _ppsMap = new Dictionary<int, byte[]>();
@@ -31,12 +32,13 @@ namespace RtspClientSharp.MediaParsers
 
         public Action<RawFrame> FrameGenerated;
 
-        public H264Parser()
+        public H264Parser(Func<DateTime> frameTimestampProvider)
         {
+            _frameTimestampProvider = frameTimestampProvider ?? throw new ArgumentNullException(nameof(frameTimestampProvider));
             _frameBuffer = new ElasticBuffer(8 * 1024, 8 * 1024 * 1024);
         }
 
-        public void Parse(DateTime frameTimestamp, ArraySegment<byte> byteSegment, bool dontSliceForce,
+        public void Parse(ArraySegment<byte> byteSegment, bool dontSliceForce,
             bool generateFrame)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
@@ -45,21 +47,27 @@ namespace RtspClientSharp.MediaParsers
                 RawH264Frame.StartMarker))
             {
                 if (dontSliceForce)
-                    ProcessNalUnit(frameTimestamp, byteSegment, true, generateFrame);
+                    ProcessNalUnit(byteSegment, true, generateFrame);
                 else
                     H264Slicer.Slice(byteSegment, SlicerOnNalUnitFound);
             }
             else
-                ProcessNalUnit(frameTimestamp, byteSegment, false, false);
+                ProcessNalUnit(byteSegment, false, false);
 
-            if (generateFrame && _frameBuffer.CountData != 0)
-            {
-                ArraySegment<byte> frameBytes = _frameBuffer.GetAccumulatedBytes();
-                TryGenerateFrame(frameTimestamp, frameBytes);
-            }
+            if (generateFrame)
+                TryGenerateFrame();
         }
 
-        private void TryGenerateFrame(DateTime frameTimestamp, ArraySegment<byte> frameBytes)
+        public void TryGenerateFrame()
+        {
+            if (_frameBuffer.CountData == 0)
+                return;
+
+            ArraySegment<byte> frameBytes = _frameBuffer.GetAccumulatedBytes();
+            TryGenerateFrame(frameBytes);
+        }
+
+        private void TryGenerateFrame(ArraySegment<byte> frameBytes)
         {
             if (_updateSpsPpsBytes)
             {
@@ -72,19 +80,23 @@ namespace RtspClientSharp.MediaParsers
 
             FrameType frameType = GetFrameType(_sliceType);
             _sliceType = -1;
+            DateTime frameTimestamp;
 
             if (frameType == FrameType.PredictionFrame && !_waitForIFrame)
             {
+                frameTimestamp = _frameTimestampProvider();
                 FrameGenerated?.Invoke(new RawH264PFrame(frameTimestamp, frameBytes));
                 return;
             }
 
-            if (frameType == FrameType.IntraFrame)
-            {
-                _waitForIFrame = false;
-                var byteSegment = new ArraySegment<byte>(_spsPpsBytes);
-                FrameGenerated?.Invoke(new RawH264IFrame(frameTimestamp, frameBytes, byteSegment));
-            }
+            if (frameType != FrameType.IntraFrame)
+                return;
+
+            _waitForIFrame = false;
+            var byteSegment = new ArraySegment<byte>(_spsPpsBytes);
+
+            frameTimestamp = _frameTimestampProvider();
+            FrameGenerated?.Invoke(new RawH264IFrame(frameTimestamp, frameBytes, byteSegment));
         }
 
         public void ResetState()
@@ -96,11 +108,10 @@ namespace RtspClientSharp.MediaParsers
 
         private void SlicerOnNalUnitFound(ArraySegment<byte> byteSegment)
         {
-            ProcessNalUnit(DateTime.MinValue, byteSegment, true, false);
+            ProcessNalUnit(byteSegment, true, false);
         }
 
-        private void ProcessNalUnit(DateTime frameTimestamp, ArraySegment<byte> byteSegment, bool hasStartMarker,
-            bool generateFrame)
+        private void ProcessNalUnit(ArraySegment<byte> byteSegment, bool hasStartMarker, bool generateFrame)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
@@ -134,7 +145,7 @@ namespace RtspClientSharp.MediaParsers
                 return;
 
             if (generateFrame && _frameBuffer.CountData == 0)
-                TryGenerateFrame(frameTimestamp, byteSegment);
+                TryGenerateFrame(byteSegment);
             else
             {
                 if (!hasStartMarker)

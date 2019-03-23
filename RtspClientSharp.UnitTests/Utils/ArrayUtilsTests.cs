@@ -54,7 +54,7 @@ namespace RtspClientSharp.UnitTests.Utils
         [TestMethod]
         public void StartsWith_PatternNotExists_ReturnsFalse()
         {
-            var pattern = new Byte[] {1, 2, 3, 9};
+            var pattern = new byte[] {1, 2, 3, 9};
             var bytes = new byte[] {0, 1, 2, 3, 4, 5, 6, 7};
 
             bool result = ArrayUtils.StartsWith(bytes, 1, bytes.Length - 1, pattern);
@@ -65,7 +65,7 @@ namespace RtspClientSharp.UnitTests.Utils
         [TestMethod]
         public void EndsWith_PatternExists_ReturnsTrue()
         {
-            var pattern = new Byte[] {1, 2, 3};
+            var pattern = new byte[] {1, 2, 3};
             var bytes = new byte[] {0, 5, 6, 7, 1, 2, 3};
 
             bool result = ArrayUtils.EndsWith(bytes, 1, bytes.Length - 1, pattern);
@@ -76,7 +76,7 @@ namespace RtspClientSharp.UnitTests.Utils
         [TestMethod]
         public void EndsWith_PatternNotExists_ReturnsFalse()
         {
-            var pattern = new Byte[] {1, 2, 3, 9};
+            var pattern = new byte[] {1, 2, 3, 9};
             var bytes = new byte[] {0, 5, 6, 7, 1, 2, 3};
 
             bool result = ArrayUtils.EndsWith(bytes, 1, bytes.Length - 1, pattern);
@@ -87,8 +87,8 @@ namespace RtspClientSharp.UnitTests.Utils
         [TestMethod]
         public void IndexOfBytes_PatternExists_ReturnsActualIndex()
         {
-            var pattern = new Byte[] {1, 2, 3};
-            var bytes = new byte[] {0, 5, 6, 7, 1, 2, 3};
+            var pattern = new byte[] {1, 2, 3};
+            var bytes = new byte[] {0, 5, 6, 7, 1, 2, 3, 4};
 
             int index = ArrayUtils.IndexOfBytes(bytes, pattern, 1, bytes.Length - 1);
 
@@ -98,7 +98,7 @@ namespace RtspClientSharp.UnitTests.Utils
         [TestMethod]
         public void IndexOfBytes_PatternNotExists_ReturnsMinusOne()
         {
-            var pattern = new Byte[] {1, 2, 3};
+            var pattern = new byte[] {1, 2, 3};
             var bytes = new byte[] {0, 5, 6, 7, 1, 2};
 
             int index = ArrayUtils.IndexOfBytes(bytes, pattern, 1, bytes.Length - 1);
