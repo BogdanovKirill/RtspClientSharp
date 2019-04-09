@@ -82,8 +82,8 @@ namespace RtspClientSharp
 
                 if (tokens.Length == 2)
                 {
-                    login = tokens[0];
-                    password = tokens[1];
+                    login = Uri.UnescapeDataString(tokens[0]);
+                    password = Uri.UnescapeDataString(tokens[1]);
                 }
             }
 
