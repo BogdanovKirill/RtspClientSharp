@@ -7,6 +7,8 @@ namespace SimpleRtspPlayer.GUI.Models
     class MainWindowModel : IMainWindowModel
     {
         private readonly RealtimeVideoSource _realtimeVideoSource = new RealtimeVideoSource();
+        private readonly RealtimeAudioSource _realtimeAudioSource = new RealtimeAudioSource();
+
         private RawFramesSource _rawFramesSource;
 
         public event EventHandler<string> StatusChanged;
@@ -22,6 +24,7 @@ namespace SimpleRtspPlayer.GUI.Models
             _rawFramesSource.ConnectionStatusChanged += ConnectionStatusChanged;
 
             _realtimeVideoSource.SetRawFramesSource(_rawFramesSource);
+            _realtimeAudioSource.SetRawFramesSource(_rawFramesSource);
 
             _rawFramesSource.Start();
         }

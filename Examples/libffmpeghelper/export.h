@@ -15,3 +15,9 @@ DllExport(void) remove_video_decoder(void *handle);
 DllExport(int) create_video_scaler(int sourceLeft, int sourceTop, int sourceWidth, int sourceHeight, int sourcePixelFormat, 
 	int scaledWidth, int scaledHeight, int scaledPixelFormat, int quality, void **handle);
 DllExport(void) remove_video_scaler(void *handle);
+
+DllExport(int) create_audio_decoder(int codec_id, int bits_per_coded_sample, void **handle);
+DllExport(int) set_audio_decoder_extradata(void *handle, void *extradata, int extradataLength);
+DllExport(int) decode_audio_frame(void *handle, void *rawBuffer, int rawBufferLength, int *outSize, int *sampleRate, int *bitsPerSample, int *channels);
+DllExport(int) get_decoded_audio_frame(void *handle, void *outBuffer);
+DllExport(void) remove_audio_decoder(void *handle);

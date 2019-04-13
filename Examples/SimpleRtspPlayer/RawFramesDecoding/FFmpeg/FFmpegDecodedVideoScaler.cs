@@ -93,7 +93,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                 scaledWidth, scaledHeight, scaledFFmpegPixelFormat, scaleQuality, out var handle);
 
             if (resultCode != 0)
-                throw new DecoderException(@"An error is occurred while creating scaler, code: {resultCode}");
+                throw new DecoderException(@"An error occurred while creating scaler, code: {resultCode}");
 
             return new FFmpegDecodedVideoScaler(handle, scaledWidth, scaledHeight, scaledPixelFormat);
         }

@@ -39,7 +39,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
             if (resultCode != 0)
                 throw new DecoderException(
-                    $"An error is occurred while creating video decoder for {videoCodecId} codec, code: {resultCode}");
+                    $"An error occurred while creating video decoder for {videoCodecId} codec, code: {resultCode}");
 
             return new FFmpegVideoDecoder(videoCodecId, decoderPtr);
         }
@@ -69,7 +69,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
                             if (resultCode != 0)
                                 throw new DecoderException(
-                                    $"An error is occurred while setting video extra data, {_videoCodecId} codec, code: {resultCode}");
+                                    $"An error occurred while setting video extra data, {_videoCodecId} codec, code: {resultCode}");
                         }
                     }
                 }
@@ -117,7 +117,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
             if (resultCode != 0)
                 throw new DecoderException(
-                    $"An error is occurred while converting decoding video frame, {_videoCodecId} codec, code: {resultCode}");
+                    $"An error occurred while converting decoding video frame, {_videoCodecId} codec, code: {resultCode}");
 
             return new DecodedVideoFrame(_currentDecodedFrameTimestamp, bufferSegment, _currentFrameParameters.Width,
                 _currentFrameParameters.Height,
