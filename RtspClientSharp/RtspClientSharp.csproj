@@ -18,12 +18,11 @@
 	<RequireLicenseAcceptance>false</RequireLicenseAcceptance>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
     <Copyright>Copyright ©2019 Kirill Bogdanov</Copyright>
-    <Version>1.2.6</Version>
-    <PackageReleaseNotes>-Bug fix: ConnectionReset on an UDP socket
+    <Version>1.2.7</Version>
+    <PackageReleaseNotes>-Wrong offset in AAC parser was fixed
+-Un-escape username and password (thank you to izfo):
 
-The problem is described here:
-https://github.com/BogdanovKirill/RtspClientSharp/issues/21
-We could avoid this by setting SIO_UDP_CONNRESET option to 0 for socket.</PackageReleaseNotes>
+https://github.com/BogdanovKirill/RtspClientSharp/pull/25</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
