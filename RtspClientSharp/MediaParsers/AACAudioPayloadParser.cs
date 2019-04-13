@@ -31,7 +31,7 @@ namespace RtspClientSharp.MediaParsers
 
             _bitStreamReader.ReInitialize(byteSegment.SubSegment(2));
 
-            int offset = byteSegment.Offset + auHeadersLengthBytes;
+            int offset = byteSegment.Offset + 2 + auHeadersLengthBytes;
 
             for (int i = 0; i < framesCount; ++i)
             {
