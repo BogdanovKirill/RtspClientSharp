@@ -30,13 +30,11 @@ namespace RtspClientSharp.UnitTests.MediaParsers
                 "fAVSESminLM1TAOg0EZUw0pLTl3ka+scMp9kmxkFKLr3YRip0Uy0JMSnfefWxGezotf3sbV4afJZrnuVnKyanaK33korbN4LMIhvBgAAAAAAAAAAAAAAAAAAAAAAAAAA70=");
 
             byte[] frameBytes = Convert.FromBase64String(
-                "D8gBNjWstHidDhDBeHDhcmXrJKiAlQVly4gBQ2BwRtxlxX9K/955/qUWHLHcHjvD85cYY5tEOUKxH+48d9W9T1/FbmTnGWedeo1" +
-                "WOrFvyEn/EkG+nzjc6WCS4jUYu0jtaPgci/Khx4lHhfRKKskNVYGpgQKS/F2s55SqLM5JvU3dNvetbNEs50prUmXLoWhGAmWj3tZO" +
-                "ajPlN8B87Nwgp1jEjbCvVDQqtXc0puGGVkZCTyGOKFyV7Egluu6/F3W+LJQQ78aru9Pc4IMqq07qDrZEd2h4RbOiRy/EMFYIrrI9/R/" +
-                "Ba2fDbtw7d6rtDUKOSqRzeEdY59hu9VRzHycBhMGYrFNnvT894d9enb6bfe12zXMS04FAs/VKZXlDV1gHsoBQqzxk6Vhb9UJ9ycUuFt" +
-                "cSFuVv3R8pmDORJUjIbRfjxaLp2/yCm8SiU4U1JMcdxVsGLdNKu5zDopcdreqHULnv202hDVysN9OJdV+WohJdkuPgtKSBM5B6WzKfuW" +
-                "5i8NfjPBTUZM5RJ4JzzwE2iUEjTqkx08FZivnwFUhEpopyzNUwDoNBGVMNKS05d5GvrHDKfZJsZBSi692EYqdFMtCTEp33n1sRns6LX97" +
-                "G1eGnyWa57lZysmp2it95KK2zeCzCIbwYAAAAAAAAAAAAAAAAAAAAAAAAAA==");
+                "ATY1rLR4nQ4QwXhw4XJl6ySogJUFZcuIAUNgcEbcZcV/Sv/eef6lFhyx3B47w/OXGGObRDlCsR/uPHfVvU9fxW5k5xlnnXqNVjqxb8hJ/xJBvp843OlgkuI1GLtI7Wj4HIvyoce" +
+                "JR4X0SirJDVWBqYECkvxdrOeUqizOSb1N3Tb3rWzRLOdKa1Jly6FoRgJlo97WTmoz5TfAfOzcIKdYxI2wr1Q0KrV3NKbhhlZGQk8hjihclexIJbruvxd1viyUEO/Gq7vT3OCDKqtO6" +
+                "g62RHdoeEWzokcvxDBWCK6yPf0fwWtnw27cO3eq7Q1Cjkqkc3hHWOfYbvVUcx8nAYTBmKxTZ70/PeHfXp2+m33tds1zEtOBQLP1SmV5Q1dYB7KAUKs8ZOlYW/VCfcnFLhbXEhblb90f" +
+                "KZgzkSVIyG0X48Wi6dv8gpvEolOFNSTHHcVbBi3TSrucw6KXHa3qh1C579tNoQ1crDfTiXVflqISXZLj4LSkgTOQelsyn7luYvDX4zwU1GTOUSeCc88BNolBI06pMdPBWYr58BVIRKaK" +
+                "cszVMA6DQRlTDSktOXeRr6xwyn2SbGQUouvdhGKnRTLQkxKd959bEZ7Oi1/extXhp8lmue5WcrJqdorfeSits3gswiG8GAAAAAAAAAAAAAAAAAAAAAAAAAADvQ==");
 
             RawAACFrame frame = null;
             var parser = new AACAudioPayloadParser(testCodecInfo);
