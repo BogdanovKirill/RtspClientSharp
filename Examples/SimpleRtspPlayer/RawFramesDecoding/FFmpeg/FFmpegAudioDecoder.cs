@@ -54,8 +54,8 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                             aacFrame.ConfigSegment.Count);
                     else
                         _extraData = aacFrame.ConfigSegment.ToArray();
-
-                    fixed (byte* extradataPtr = &aacFrame.ConfigSegment.Array[aacFrame.ConfigSegment.Offset])
+                    
+                    fixed (byte* extradataPtr = &_extraData[0])
                     {
                         int resultCode = FFmpegAudioPInvoke.SetAudioDecoderExtraData(_decoderHandle, (IntPtr)extradataPtr, aacFrame.ConfigSegment.Count);
 
