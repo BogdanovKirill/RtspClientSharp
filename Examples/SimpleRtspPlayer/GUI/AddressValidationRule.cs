@@ -12,14 +12,16 @@ namespace SimpleRtspPlayer.GUI
         {
             var address = value as string;
 
+            const string invalidAddress = "Invalid address";
+
             if (string.IsNullOrEmpty(address))
-                throw new UriFormatException();
+                return new ValidationResult(false, invalidAddress);
 
             if (!address.StartsWith(RtspPrefix))
                 address = RtspPrefix + address;
 
             if (!Uri.TryCreate(address, UriKind.Absolute, out _))
-                return new ValidationResult(false, "Invalid address");
+                return new ValidationResult(false, invalidAddress);
 
             return new ValidationResult(true, null);
         }
