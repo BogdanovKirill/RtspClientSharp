@@ -6,7 +6,6 @@ struct AudioDecoderContext
 	AVCodecContext *av_codec_context;
 	AVPacket av_raw_packet;
 	AVFrame *frame;
-	int decoded_size;
 };
 
 struct AudioResamplerContext
@@ -113,7 +112,6 @@ int decode_audio_frame(void *handle, void *rawBuffer, int rawBufferLength, int *
 
 	auto context = static_cast<AudioDecoderContext *>(handle);
 
-	context->decoded_size = 0;
 	context->av_raw_packet.data = static_cast<uint8_t *>(rawBuffer);
 	context->av_raw_packet.size = rawBufferLength;
 
@@ -130,7 +128,6 @@ int decode_audio_frame(void *handle, void *rawBuffer, int rawBufferLength, int *
 		*sampleFormat = context->av_codec_context->sample_fmt;
 		*bitsPerSample = av_get_bytes_per_sample(context->av_codec_context->sample_fmt) * 8;
 		*channels = context->av_codec_context->channels;
-		context->decoded_size = av_samples_get_buffer_size(nullptr, context->av_codec_context->channels, context->frame->nb_samples, context->av_codec_context->sample_fmt, 1);
 
 		return 0;
 	}
@@ -147,11 +144,8 @@ int get_decoded_audio_frame(void *handle, void **outBuffer, int *outDataSize)
 
 	auto context = static_cast<AudioDecoderContext *>(handle);
 
-	if (context->decoded_size == 0)
-		return -2;
-
 	*reinterpret_cast<uint8_t **>(outBuffer) = context->frame->data[0];
-	*outDataSize = context->decoded_size;
+	*outDataSize = av_samples_get_buffer_size(nullptr, context->av_codec_context->channels, context->frame->nb_samples, context->av_codec_context->sample_fmt, 1);;
 	return 0;
 }
 
