@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using RtspClientSharp.RawFrames;
 using RtspClientSharp.RawFrames.Audio;
+using SimpleRtspPlayer.RawFramesDecoding;
 using SimpleRtspPlayer.RawFramesDecoding.DecodedFrames;
 using SimpleRtspPlayer.RawFramesDecoding.FFmpeg;
 using SimpleRtspPlayer.RawFramesReceiving;
@@ -11,7 +12,6 @@ namespace SimpleRtspPlayer.GUI
     class RealtimeAudioSource : IAudioSource
     {
         private IRawFramesSource _rawFramesSource;
-        private byte[] _decodedFrameBuffer = new byte[0];
 
         private readonly Dictionary<FFmpegAudioCodecId, FFmpegAudioDecoder> _audioDecodersMap =
             new Dictionary<FFmpegAudioCodecId, FFmpegAudioDecoder>();
@@ -38,15 +38,12 @@ namespace SimpleRtspPlayer.GUI
 
             FFmpegAudioDecoder decoder = GetDecoderForFrame(rawAudioFrame);
 
-            if (!decoder.TryDecode(rawAudioFrame, out int decodedFrameSize))
+            if (!decoder.TryDecode(rawAudioFrame))
                 return;
 
-            if (_decodedFrameBuffer.Length < decodedFrameSize)
-                _decodedFrameBuffer = new byte[decodedFrameSize];
+            IDecodedAudioFrame decodedFrame = decoder.GetDecodedFrame(new AudioConversionParameters() {OutBitsPerSample = 16});
 
-            var bufferSegment = new ArraySegment<byte>(_decodedFrameBuffer, 0, decodedFrameSize);
 
-            IDecodedAudioFrame decodedFrame = decoder.GetDecodedFrame(bufferSegment);
 
             FrameReceived?.Invoke(this, decodedFrame);
         }

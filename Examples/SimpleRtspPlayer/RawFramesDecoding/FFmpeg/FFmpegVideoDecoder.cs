@@ -20,6 +20,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
             new Dictionary<PostVideoDecodingParameters, FFmpegDecodedVideoScaler>();
 
         private byte[] _extraData = new byte[0];
+        private byte[] _decodedFrameBuffer = new byte[0];
         private bool _disposed;
 
         private FFmpegVideoDecoder(FFmpegVideoCodecId videoCodecId, IntPtr decoderHandle)
@@ -98,8 +99,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
             }
         }
 
-        public unsafe IDecodedVideoFrame GetDecodedFrame(ArraySegment<byte> bufferSegment,
-            PostVideoDecodingParameters parameters)
+        public unsafe IDecodedVideoFrame GetDecodedFrame(PostVideoDecodingParameters parameters)
         {
             if (!_scalersMap.TryGetValue(parameters, out FFmpegDecodedVideoScaler videoScaler))
             {
@@ -109,17 +109,20 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
             int resultCode;
 
-            Debug.Assert(bufferSegment.Array != null, "bufferSegment.Array != null");
+            int bufferSize = parameters.TargetFrameSize.Height *
+                             ImageUtils.GetStride(parameters.TargetFrameSize.Width, parameters.TargetFormat);
 
-            fixed (byte* scaledBuffer = &bufferSegment.Array[bufferSegment.Offset])
-                resultCode = FFmpegVideoPInvoke.ScaleDecodedVideoFrame(_decoderHandle, videoScaler.Handle,
-                    (IntPtr) scaledBuffer, videoScaler.ScaledStride);
+            if (_decodedFrameBuffer.Length < bufferSize)
+                _decodedFrameBuffer = new byte[bufferSize];
+
+            fixed (byte* scaledBuffer = _decodedFrameBuffer)
+                resultCode = FFmpegVideoPInvoke.ScaleDecodedVideoFrame(_decoderHandle, videoScaler.Handle, (IntPtr) scaledBuffer, videoScaler.ScaledStride);
 
             if (resultCode != 0)
                 throw new DecoderException(
                     $"An error occurred while converting decoding video frame, {_videoCodecId} codec, code: {resultCode}");
 
-            return new DecodedVideoFrame(_currentDecodedFrameTimestamp, bufferSegment, _currentFrameParameters.Width,
+            return new DecodedVideoFrame(_currentDecodedFrameTimestamp, new ArraySegment<byte>(_decodedFrameBuffer, 0, bufferSize), _currentFrameParameters.Width,
                 _currentFrameParameters.Height,
                 videoScaler.ScaledWidth, videoScaler.ScaledHeight, videoScaler.ScaledPixelFormat,
                 videoScaler.ScaledStride);

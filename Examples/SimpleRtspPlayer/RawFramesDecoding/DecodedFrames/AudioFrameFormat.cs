@@ -1,6 +1,6 @@
 ﻿namespace SimpleRtspPlayer.RawFramesDecoding.DecodedFrames
 {
-    public struct AudioFrameFormat
+    public readonly struct AudioFrameFormat
     {
         public int SampleRate { get; }
         public int BitPerSample { get; }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using RtspClientSharp.RawFrames.Audio;
 using SimpleRtspPlayer.RawFramesDecoding.DecodedFrames;
 
@@ -10,9 +11,11 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
     {
         private readonly IntPtr _decoderHandle;
         private readonly FFmpegAudioCodecId _audioCodecId;
+        private IntPtr _resamplerHandle;
         private AudioFrameFormat _currentFrameFormat = new AudioFrameFormat(0, 0, 0);
         private DateTime _currentRawFrameTimestamp;
         private byte[] _extraData = new byte[0];
+        private byte[] _decodedFrameBuffer = new byte[0];
         private bool _disposed;
 
         public int BitsPerCodedSample { get; }
@@ -41,7 +44,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
         }
 
         /// <exception cref="DecoderException"></exception>
-        public unsafe bool TryDecode(RawAudioFrame rawAudioFrame, out int decodedFrameSize)
+        public unsafe bool TryDecode(RawAudioFrame rawAudioFrame)
         {
             if (rawAudioFrame is RawAACFrame aacFrame)
             {
@@ -54,7 +57,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                             aacFrame.ConfigSegment.Count);
                     else
                         _extraData = aacFrame.ConfigSegment.ToArray();
-                    
+
                     fixed (byte* extradataPtr = &_extraData[0])
                     {
                         int resultCode = FFmpegAudioPInvoke.SetAudioDecoderExtraData(_decoderHandle, (IntPtr)extradataPtr, aacFrame.ConfigSegment.Count);
@@ -69,45 +72,82 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
             fixed (byte* rawBufferPtr = &rawAudioFrame.FrameSegment.Array[rawAudioFrame.FrameSegment.Offset])
             {
-                int sampleRate;
-                int bitsPerSample;
-                int channels;
-
-                int resultCode = FFmpegAudioPInvoke.DecodeFrame(_decoderHandle, (IntPtr)rawBufferPtr, rawAudioFrame.FrameSegment.Count,
-                    out decodedFrameSize, out sampleRate, out bitsPerSample, out channels);
+                int resultCode = FFmpegAudioPInvoke.DecodeFrame(_decoderHandle, (IntPtr)rawBufferPtr,
+                    rawAudioFrame.FrameSegment.Count, out int sampleRate, out int bitsPerSample, out int channels);
 
                 _currentRawFrameTimestamp = rawAudioFrame.Timestamp;
 
                 if (resultCode != 0)
                     return false;
-                
+
                 if (rawAudioFrame is RawG711Frame g711Frame)
                 {
                     sampleRate = g711Frame.SampleRate;
                     channels = g711Frame.Channels;
                 }
 
-                if (_currentFrameFormat.SampleRate != sampleRate || _currentFrameFormat.BitPerSample != bitsPerSample || _currentFrameFormat.Channels != channels)
+                if (_currentFrameFormat.SampleRate != sampleRate || _currentFrameFormat.BitPerSample != bitsPerSample ||
+                    _currentFrameFormat.Channels != channels)
+                {
                     _currentFrameFormat = new AudioFrameFormat(sampleRate, bitsPerSample, channels);
+
+                    if (_resamplerHandle != IntPtr.Zero)
+                        FFmpegAudioPInvoke.RemoveAudioResampler(_resamplerHandle);
+                }
             }
 
             return true;
         }
 
         /// <exception cref="DecoderException"></exception>
-        public unsafe IDecodedAudioFrame GetDecodedFrame(ArraySegment<byte> bufferSegment)
+        public IDecodedAudioFrame GetDecodedFrame(AudioConversionParameters optionalAudioConversionParameters = null)
         {
-            Debug.Assert(bufferSegment.Array != null, "bufferSegment.Array != null");
+            IntPtr outBufferPtr;
+            int dataSize;
 
-            fixed (byte* outByteSegmentPtr = &bufferSegment.Array[bufferSegment.Offset])
+            AudioFrameFormat format;
+
+            int resultCode;
+
+            if (optionalAudioConversionParameters == null ||
+                (optionalAudioConversionParameters.OutSampleRate == 0 || optionalAudioConversionParameters.OutSampleRate == _currentFrameFormat.SampleRate) &&
+                (optionalAudioConversionParameters.OutBitsPerSample == 0 || optionalAudioConversionParameters.OutBitsPerSample == _currentFrameFormat.BitPerSample) &&
+                (optionalAudioConversionParameters.OutChannels == 0 || optionalAudioConversionParameters.OutChannels == _currentFrameFormat.Channels))
             {
-                int resultCode = FFmpegAudioPInvoke.GetDecodedFrame(_decoderHandle, (IntPtr)outByteSegmentPtr);
+                resultCode = FFmpegAudioPInvoke.GetDecodedFrame(_decoderHandle, out outBufferPtr, out dataSize);
 
                 if (resultCode != 0)
                     throw new DecoderException($"An error occurred while getting decoded audio frame, {_audioCodecId} codec, code: {resultCode}");
+
+                format = _currentFrameFormat;
+            }
+            else
+            {
+                if (_resamplerHandle == IntPtr.Zero)
+                {
+                    resultCode = FFmpegAudioPInvoke.CreateAudioResampler(_decoderHandle,
+                        optionalAudioConversionParameters.OutSampleRate, optionalAudioConversionParameters.OutBitsPerSample,
+                        optionalAudioConversionParameters.OutChannels, out _resamplerHandle);
+
+                    if (resultCode != 0)
+                        throw new DecoderException($"An error occurred while creating audio resampler, code: {resultCode}");
+                }
+
+                resultCode = FFmpegAudioPInvoke.ResampleDecodedFrame(_decoderHandle, _resamplerHandle, out outBufferPtr, out dataSize);
+
+                if (resultCode != 0)
+                    throw new DecoderException($"An error occurred while converting audio frame, code: {resultCode}");
+
+                format = new AudioFrameFormat(optionalAudioConversionParameters.OutSampleRate != 0 ? optionalAudioConversionParameters.OutSampleRate : _currentFrameFormat.SampleRate,
+                    optionalAudioConversionParameters.OutBitsPerSample != 0 ? optionalAudioConversionParameters.OutBitsPerSample : _currentFrameFormat.BitPerSample,
+                    optionalAudioConversionParameters.OutChannels != 0 ? optionalAudioConversionParameters.OutChannels : _currentFrameFormat.Channels);
             }
 
-            return new DecodedAudioFrame(_currentRawFrameTimestamp, bufferSegment, _currentFrameFormat);
+            if (_decodedFrameBuffer.Length < dataSize)
+                _decodedFrameBuffer = new byte[dataSize];
+
+            Marshal.Copy(outBufferPtr, _decodedFrameBuffer, 0, dataSize);
+            return new DecodedAudioFrame(_currentRawFrameTimestamp, new ArraySegment<byte>(_decodedFrameBuffer, 0, dataSize), format);
         }
 
         public void Dispose()
@@ -117,6 +157,10 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
             _disposed = true;
             FFmpegAudioPInvoke.RemoveAudioDecoder(_decoderHandle);
+
+            if (_resamplerHandle != IntPtr.Zero)
+                FFmpegAudioPInvoke.RemoveAudioResampler(_resamplerHandle);
+
             GC.SuppressFinalize(this);
         }
     }

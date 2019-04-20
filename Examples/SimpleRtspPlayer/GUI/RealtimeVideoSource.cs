@@ -14,7 +14,6 @@ namespace SimpleRtspPlayer.GUI
     class RealtimeVideoSource : IVideoSource, IDisposable
     {
         private IRawFramesSource _rawFramesSource;
-        private byte[] _decodedFrameBuffer = new byte[0];
 
         private readonly Dictionary<FFmpegVideoCodecId, FFmpegVideoDecoder> _videoDecodersMap =
             new Dictionary<FFmpegVideoCodecId, FFmpegVideoDecoder>();
@@ -73,35 +72,22 @@ namespace SimpleRtspPlayer.GUI
             int targetWidth;
             int targetHeight;
 
-            int bufferSize;
-
             if (desiredSize == 0)
             {
                 targetWidth = decodedFrameParameters.Width;
                 targetHeight = decodedFrameParameters.Height;
-
-                bufferSize = decodedFrameParameters.Height *
-                             ImageUtils.GetStride(decodedFrameParameters.Width, PixelFormat.Bgr24);
             }
             else
             {
                 targetWidth = (int) (desiredSize >> 32);
                 targetHeight = (int) desiredSize;
-
-                bufferSize = targetHeight *
-                             ImageUtils.GetStride(targetWidth, PixelFormat.Bgr24);
             }
-
-            if (_decodedFrameBuffer.Length != bufferSize)
-                _decodedFrameBuffer = new byte[bufferSize];
-
-            var bufferSegment = new ArraySegment<byte>(_decodedFrameBuffer);
 
             var postVideoDecodingParameters = new PostVideoDecodingParameters(RectangleF.Empty,
                 new Size(targetWidth, targetHeight),
                 ScalingPolicy.Stretch, PixelFormat.Bgr24, ScalingQuality.Bicubic);
 
-            IDecodedVideoFrame decodedFrame = decoder.GetDecodedFrame(bufferSegment, postVideoDecodingParameters);
+            IDecodedVideoFrame decodedFrame = decoder.GetDecodedFrame(postVideoDecodingParameters);
 
             FrameReceived?.Invoke(this, decodedFrame);
         }
