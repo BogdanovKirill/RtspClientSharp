@@ -19,7 +19,7 @@ namespace SimpleRtspPlayer.GUI.ViewModels
         private bool _startButtonEnabled = true;
         private bool _stopButtonEnabled;
 
-        public string DeviceAddress { get; set; } = "rtsp://192.168.1.77:554/ucast/11";
+        public string DeviceAddress { get; set; } = "rtsp://184.72.239.149/vod/mp4:BigBuckBunny_115k.mov";
 
         public string Login { get; set; } = "admin";
         public string Password { get; set; } = "123456";
