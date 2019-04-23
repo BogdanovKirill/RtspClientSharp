@@ -188,7 +188,7 @@ namespace RtspClientSharp.Rtsp
             return authorizationHeader;
         }
 
-        private async Task<int> ReadUntilEndOfHeadersAsync(Stream stream, byte[] buffer)
+        private static async Task<int> ReadUntilEndOfHeadersAsync(Stream stream, byte[] buffer)
         {
             int offset = 0;
 
