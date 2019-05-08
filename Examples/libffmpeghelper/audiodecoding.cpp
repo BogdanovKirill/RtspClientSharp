@@ -100,10 +100,10 @@ int set_audio_decoder_extradata(void *handle, void *extradata, int extradataLeng
 	return 0;
 }
 
-int decode_audio_frame(void *handle, void *rawBuffer, int rawBufferLength, int *sampleRate, int *bitsPerSample, int *channels, int *sampleFormat)
+int decode_audio_frame(void *handle, void *rawBuffer, int rawBufferLength, int *sampleRate, int *bitsPerSample, int *channels)
 {
 #if _DEBUG
-	if (!handle || !rawBuffer || !rawBufferLength || !sampleRate || !bitsPerSample || !channels || !sampleFormat)
+	if (!handle || !rawBuffer || !rawBufferLength || !sampleRate || !bitsPerSample || !channels)
 		return -1;
 
 	if (reinterpret_cast<uintptr_t>(rawBuffer) % 4 != 0)
@@ -125,7 +125,6 @@ int decode_audio_frame(void *handle, void *rawBuffer, int rawBufferLength, int *
 	if (got_frame)
 	{
 		*sampleRate = context->av_codec_context->sample_rate;
-		*sampleFormat = context->av_codec_context->sample_fmt;
 		*bitsPerSample = av_get_bytes_per_sample(context->av_codec_context->sample_fmt) * 8;
 		*channels = context->av_codec_context->channels;
 
