@@ -51,7 +51,9 @@ namespace RtspClientSharp
 
             var uriBuilder = new UriBuilder(ConnectionUri)
             {
-                Scheme = "rtsp"
+                Scheme = "rtsp",
+                UserName = string.Empty,
+                Password = string.Empty
             };
 
             if (ConnectionUri.Port == -1)

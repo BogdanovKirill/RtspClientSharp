@@ -70,7 +70,10 @@ namespace SimpleRtspPlayer.GUI.ViewModels
             }
 
             var credential = new NetworkCredential(Login, Password);
-            var connectionParameters = new ConnectionParameters(deviceUri, credential);
+
+            var connectionParameters = !string.IsNullOrEmpty(deviceUri.UserInfo) ? new ConnectionParameters(deviceUri) : 
+                new ConnectionParameters(deviceUri, credential);
+
             connectionParameters.RtpTransport = RtpTransportProtocol.UDP;
             connectionParameters.CancelTimeout = TimeSpan.FromSeconds(1);
 
