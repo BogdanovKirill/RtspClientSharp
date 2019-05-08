@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using RtspClientSharp.RawFrames.Video;
 using RtspClientSharp.Utils;
 
@@ -112,7 +113,7 @@ namespace RtspClientSharp.MediaParsers
             0xf9, 0xfa
         };
 
-        private readonly ElasticBuffer _frameBuffer;
+        private readonly MemoryStream _frameStream;
 
         private int _currentDri;
         private int _currentQ;
@@ -127,10 +128,11 @@ namespace RtspClientSharp.MediaParsers
 
         private byte[] _quantizationTables = new byte[0];
         private int _quantizationTablesLength;
+        private TimeSpan _previousTimeOffset = TimeSpan.MinValue;
 
         public MJPEGVideoPayloadParser()
         {
-            _frameBuffer = new ElasticBuffer(64 * 1024, 8 * 1024 * 1024);
+            _frameStream = new MemoryStream(64 * 1024);
         }
 
         public override void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit)
@@ -139,6 +141,11 @@ namespace RtspClientSharp.MediaParsers
 
             if (byteSegment.Count < JpegHeaderSize)
                 throw new MediaPayloadParserException("Input data size is smaller than JPEG header size");
+
+            if (_previousTimeOffset != timeOffset && _frameStream.Position != 0)
+                _frameStream.Position = 0;
+
+            _previousTimeOffset = timeOffset;
 
             int offset = byteSegment.Offset + 1;
 
@@ -159,7 +166,7 @@ namespace RtspClientSharp.MediaParsers
 
             if (fragmentOffset == 0)
             {
-                if (_frameBuffer.CountData != 0)
+                if (_frameStream.Position != 0)
                     GenerateFrame(timeOffset);
 
                 bool quantizationTablesChanged = false;
@@ -203,10 +210,10 @@ namespace RtspClientSharp.MediaParsers
                     ReInitializeJpegHeader();
                 }
 
-                _frameBuffer.AddBytes(_jpegHeaderBytesSegment);
+                _frameStream.Write(_jpegHeaderBytesSegment.Array, _jpegHeaderBytesSegment.Offset, _jpegHeaderBytesSegment.Count);
             }
 
-            if (fragmentOffset != 0 && _frameBuffer.CountData == 0)
+            if (fragmentOffset != 0 && _frameStream.Position == 0)
                 return;
 
             int dataSize = byteSegment.Offset + byteSegment.Count - offset;
@@ -214,12 +221,12 @@ namespace RtspClientSharp.MediaParsers
             if (dataSize < 0)
                 throw new MediaPayloadParserException($"Invalid payload size: {dataSize}");
 
-            _frameBuffer.AddBytes(new ArraySegment<byte>(byteSegment.Array, offset, dataSize));
+            _frameStream.Write(byteSegment.Array, offset, dataSize);
         }
 
         public override void ResetState()
         {
-            _frameBuffer.ResetState();
+            _frameStream.Position = 0;
         }
 
         private void ReInitializeJpegHeader()
@@ -406,14 +413,15 @@ namespace RtspClientSharp.MediaParsers
 
         private void GenerateFrame(TimeSpan timeOffset)
         {
-            ArraySegment<byte> stateBytes = _frameBuffer.StateByteSegment;
+            int frameSize = (int) _frameStream.Position;
 
-            if (!ArrayUtils.EndsWith(stateBytes.Array, stateBytes.Offset,
-                stateBytes.Count, RawJpegFrame.EndMarkerBytes))
-                _frameBuffer.AddBytes(JpegEndMarkerByteSegment);
+            if (!ArrayUtils.EndsWith(_frameStream.GetBuffer(),0,
+                frameSize, RawJpegFrame.EndMarkerBytes))
+                _frameStream.Write(JpegEndMarkerByteSegment.Array, JpegEndMarkerByteSegment.Offset, JpegEndMarkerByteSegment.Count);
 
             DateTime timestamp = GetFrameTimestamp(timeOffset);
-            ArraySegment<byte> frameBytes = _frameBuffer.GetAccumulatedBytes();
+            var frameBytes = new ArraySegment<byte>(_frameStream.GetBuffer(), 0, frameSize);
+            _frameStream.Position = 0;
 
             var frame = new RawJpegFrame(timestamp, frameBytes);
             OnFrameGenerated(frame);

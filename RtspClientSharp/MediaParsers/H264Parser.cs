@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using RtspClientSharp.RawFrames;
 using RtspClientSharp.RawFrames.Video;
@@ -28,14 +29,14 @@ namespace RtspClientSharp.MediaParsers
         private bool _updateSpsPpsBytes;
         private int _sliceType = -1;
 
-        private readonly ElasticBuffer _frameBuffer;
+        private readonly MemoryStream _frameStream;
 
         public Action<RawFrame> FrameGenerated;
 
         public H264Parser(Func<DateTime> frameTimestampProvider)
         {
             _frameTimestampProvider = frameTimestampProvider ?? throw new ArgumentNullException(nameof(frameTimestampProvider));
-            _frameBuffer = new ElasticBuffer(8 * 1024, 8 * 1024 * 1024);
+            _frameStream = new MemoryStream(8 * 1024);
         }
 
         public void Parse(ArraySegment<byte> byteSegment, bool dontSliceForce,
@@ -60,10 +61,11 @@ namespace RtspClientSharp.MediaParsers
 
         public void TryGenerateFrame()
         {
-            if (_frameBuffer.CountData == 0)
+            if (_frameStream.Position == 0)
                 return;
 
-            ArraySegment<byte> frameBytes = _frameBuffer.GetAccumulatedBytes();
+            var frameBytes = new ArraySegment<byte>(_frameStream.GetBuffer(), 0, (int)_frameStream.Position);
+            _frameStream.Position = 0;
             TryGenerateFrame(frameBytes);
         }
 
@@ -101,7 +103,7 @@ namespace RtspClientSharp.MediaParsers
 
         public void ResetState()
         {
-            _frameBuffer.ResetState();
+            _frameStream.Position = 0;
             _sliceType = -1;
             _waitForIFrame = true;
         }
@@ -144,14 +146,14 @@ namespace RtspClientSharp.MediaParsers
             if (nri || nalUnitType == 6)
                 return;
 
-            if (generateFrame && _frameBuffer.CountData == 0)
+            if (generateFrame && _frameStream.Position == 0)
                 TryGenerateFrame(byteSegment);
             else
             {
                 if (!hasStartMarker)
-                    _frameBuffer.AddBytes(StartMarkerSegment);
+                    _frameStream.Write(StartMarkerSegment.Array, StartMarkerSegment.Offset, StartMarkerSegment.Count);
 
-                _frameBuffer.AddBytes(byteSegment);
+                _frameStream.Write(byteSegment.Array, byteSegment.Offset, byteSegment.Count);
             }
         }
 

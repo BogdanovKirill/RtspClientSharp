@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using RtspClientSharp.Codecs.Video;
 using RtspClientSharp.RawFrames.Video;
 using RtspClientSharp.Utils;
@@ -22,7 +23,7 @@ namespace RtspClientSharp.MediaParsers
         const int DondFieldSize = 1;
 
         private readonly H264Parser _h264Parser;
-        private readonly ElasticBuffer _nalBuffer;
+        private readonly MemoryStream _nalStream;
         private bool _waitForStartFu = true;
         private TimeSpan _timeOffset = TimeSpan.MinValue;
 
@@ -38,7 +39,7 @@ namespace RtspClientSharp.MediaParsers
             if (codecInfo.SpsPpsBytes.Length != 0)
                 _h264Parser.Parse(new ArraySegment<byte>(codecInfo.SpsPpsBytes), false, false);
 
-            _nalBuffer = new ElasticBuffer(8 * 1024, 512 * 1024);
+            _nalStream = new MemoryStream(8 * 1024);
         }
 
         public override void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit)
@@ -80,7 +81,7 @@ namespace RtspClientSharp.MediaParsers
 
         public override void ResetState()
         {
-            _nalBuffer.ResetState();
+            _nalStream.Position = 0;
             _h264Parser.ResetState();
             _waitForStartFu = true;
         }
@@ -106,9 +107,9 @@ namespace RtspClientSharp.MediaParsers
 
                 if (!ArrayUtils.StartsWith(nalUnitSegment.Array, nalUnitSegment.Offset, nalUnitSegment.Count,
                     RawH264Frame.StartMarker))
-                    _nalBuffer.AddBytes(H264Parser.StartMarkerSegment);
+                    _nalStream.Write(H264Parser.StartMarkerSegment.Array, H264Parser.StartMarkerSegment.Offset, H264Parser.StartMarkerSegment.Count);
 
-                _nalBuffer.AddBytes(nalUnitSegment);
+                _nalStream.Write(nalUnitSegment.Array, nalUnitSegment.Offset, nalUnitSegment.Count);
 
                 if (endFlag)
                 {
@@ -126,12 +127,12 @@ namespace RtspClientSharp.MediaParsers
 
             offset += donFieldSize + 1;
 
-            _nalBuffer.AddBytes(new ArraySegment<byte>(byteSegment.Array, offset,
-                byteSegment.Offset + byteSegment.Count - offset));
+            _nalStream.Write(byteSegment.Array, offset, byteSegment.Offset + byteSegment.Count - offset);
 
             if (endFlag)
             {
-                ArraySegment<byte> nalUnitSegment = _nalBuffer.GetAccumulatedBytes();
+                var nalUnitSegment = new ArraySegment<byte>(_nalStream.GetBuffer(), 0, (int)_nalStream.Position);
+                _nalStream.Position = 0;
                 _h264Parser.Parse(nalUnitSegment, true, markerBit);
                 _waitForStartFu = true;
             }
