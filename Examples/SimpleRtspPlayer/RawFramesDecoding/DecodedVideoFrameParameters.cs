@@ -17,8 +17,6 @@ namespace SimpleRtspPlayer.RawFramesDecoding
             PixelFormat = pixelFormat;
         }
 
-        public bool AreValid => Width != 0 && Height != 0 && PixelFormat != FFmpegPixelFormat.None;
-
         protected bool Equals(DecodedVideoFrameParameters other)
         {
             return Width == other.Width && Height == other.Height && PixelFormat == other.PixelFormat;

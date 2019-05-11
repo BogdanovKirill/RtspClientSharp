@@ -170,9 +170,10 @@ int create_audio_resampler(void *decoderHandle, int outSampleRate, int outBitsPe
 #if _DEBUG
 	if (!handle)
 		return -1;
-
+#endif
 	const auto decoder_context = static_cast<AudioDecoderContext *>(decoderHandle);
 
+#if _DEBUG
 	if (!decoder_context)
 		return -2;
 #endif

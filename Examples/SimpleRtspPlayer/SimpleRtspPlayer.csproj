@@ -138,10 +138,9 @@
     <Compile Include="RawFramesDecoding\FFmpeg\FFmpegVideoDecoder.cs" />
     <Compile Include="RawFramesDecoding\FFmpeg\FFmpegVideoPInvoke.cs" />
     <Compile Include="RawFramesDecoding\DecodedFrames\AudioFrameFormat.cs" />
-    <Compile Include="RawFramesDecoding\ImageUtils.cs" />
     <Compile Include="RawFramesDecoding\PixelFormat.cs" />
     <Compile Include="RawFramesDecoding\AudioConversionParameters.cs" />
-    <Compile Include="RawFramesDecoding\PostVideoDecodingParameters.cs" />
+    <Compile Include="RawFramesDecoding\TransformParameters.cs" />
     <Compile Include="RawFramesDecoding\ScalingQuality.cs" />
     <Compile Include="RawFramesDecoding\ScalingPolicy.cs" />
     <Compile Include="RawFramesReceiving\IRawFramesSource.cs" />

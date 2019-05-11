@@ -136,8 +136,6 @@ int scale_decoded_video_frame(void *handle, void *scalerHandle, void *scaledBuff
 	auto context = static_cast<VideoDecoderContext *>(handle);
 	const auto scalerContext = static_cast<ScalerContext *>(scalerHandle);
 
-	uint8_t *srcData[8];
-
 	if (scalerContext->source_top != 0 || scalerContext->source_left != 0)
 	{
 		const AVPixFmtDescriptor *sourceFmtDesc = av_pix_fmt_desc_get(scalerContext->source_pixel_format);
@@ -147,6 +145,8 @@ int scale_decoded_video_frame(void *handle, void *scalerHandle, void *scaledBuff
 
 		const int x_shift = sourceFmtDesc->log2_chroma_w;
 		const int y_shift = sourceFmtDesc->log2_chroma_h;
+		
+		uint8_t *srcData[8];
 
 		srcData[0] = context->frame->data[0] + scalerContext->source_top * context->frame->linesize[0] + scalerContext->source_left;
 		srcData[1] = context->frame->data[1] + (scalerContext->source_top >> y_shift) * context->frame->linesize[1] + (scalerContext->source_left >> x_shift);
@@ -156,12 +156,15 @@ int scale_decoded_video_frame(void *handle, void *scalerHandle, void *scaledBuff
 		srcData[5] = nullptr;
 		srcData[6] = nullptr;
 		srcData[7] = nullptr;
+
+		sws_scale(scalerContext->sws_context, srcData, context->frame->linesize, 0,
+			scalerContext->source_height, reinterpret_cast<uint8_t **>(&scaledBuffer), &scaledBufferStride);
 	}
 	else
-		memcpy(srcData, context->frame->data, sizeof srcData);
-
-	sws_scale(scalerContext->sws_context, srcData, context->frame->linesize, 0, 
-		scalerContext->source_height, reinterpret_cast<uint8_t **>(&scaledBuffer), &scaledBufferStride);
+	{
+		sws_scale(scalerContext->sws_context, context->frame->data, context->frame->linesize, 0,
+			scalerContext->source_height, reinterpret_cast<uint8_t **>(&scaledBuffer), &scaledBufferStride);
+	}
 
 	return 0;
 }

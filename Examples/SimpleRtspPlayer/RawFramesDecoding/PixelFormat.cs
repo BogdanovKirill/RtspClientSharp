@@ -4,6 +4,6 @@
     {
         Grayscale,
         Bgr24,
-        Abgr32,
+        Bgra32,
     }
 }

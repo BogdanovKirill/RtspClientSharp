@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using SimpleRtspPlayer.RawFramesDecoding;
 using SimpleRtspPlayer.RawFramesDecoding.DecodedFrames;
+using PixelFormat = SimpleRtspPlayer.RawFramesDecoding.PixelFormat;
 
 namespace SimpleRtspPlayer.GUI.Views
 {
@@ -16,17 +18,17 @@ namespace SimpleRtspPlayer.GUI.Views
     /// </summary>
     public partial class VideoView
     {
-        private static readonly Color DefaultFillColor = Colors.Black;
+        private static readonly System.Windows.Media.Color DefaultFillColor = Colors.Black;
         private static readonly TimeSpan ResizeHandleTimeout = TimeSpan.FromMilliseconds(500);
 
-        private Color _fillColor = DefaultFillColor;
+        private System.Windows.Media.Color _fillColor = DefaultFillColor;
         private WriteableBitmap _writeableBitmap;
 
         private int _width;
         private int _height;
         private Int32Rect _dirtyRect;
+        private TransformParameters _transformParameters;
         private readonly Action<IDecodedVideoFrame> _invalidateAction;
-        private DispatcherOperation _invalidateOperation;
 
         private Task _handleSizeChangedTask = Task.CompletedTask;
         private CancellationTokenSource _resizeCancellationTokenSource = new CancellationTokenSource();
@@ -37,19 +39,19 @@ namespace SimpleRtspPlayer.GUI.Views
             new FrameworkPropertyMetadata(OnVideoSourceChanged));
 
         public static readonly DependencyProperty FillColorProperty = DependencyProperty.Register(nameof(FillColor),
-            typeof(Color),
+            typeof(System.Windows.Media.Color),
             typeof(VideoView),
             new FrameworkPropertyMetadata(DefaultFillColor, OnFillColorPropertyChanged));
 
         public IVideoSource VideoSource
         {
-            get => (IVideoSource) GetValue(VideoSourceProperty);
+            get => (IVideoSource)GetValue(VideoSourceProperty);
             set => SetValue(VideoSourceProperty, value);
         }
 
-        public Color FillColor
+        public System.Windows.Media.Color FillColor
         {
-            get => (Color) GetValue(FillColorProperty);
+            get => (System.Windows.Media.Color)GetValue(FillColorProperty);
             set => SetValue(FillColorProperty, value);
         }
 
@@ -59,10 +61,10 @@ namespace SimpleRtspPlayer.GUI.Views
             _invalidateAction = Invalidate;
         }
 
-        protected override Size MeasureOverride(Size constraint)
+        protected override System.Windows.Size MeasureOverride(System.Windows.Size constraint)
         {
-            int newWidth = (int) constraint.Width;
-            int newHeight = (int) constraint.Height;
+            int newWidth = (int)constraint.Width;
+            int newHeight = (int)constraint.Height;
 
             if (_width != newWidth || _height != newHeight)
             {
@@ -85,9 +87,6 @@ namespace SimpleRtspPlayer.GUI.Views
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     ReinitializeBitmap(width, height);
-
-                    IVideoSource source = VideoSource;
-                    source?.SetVideoSize(width, height);
                 }, DispatcherPriority.Send, token);
             }
             catch (OperationCanceledException)
@@ -101,12 +100,16 @@ namespace SimpleRtspPlayer.GUI.Views
             _height = height;
             _dirtyRect = new Int32Rect(0, 0, width, height);
 
+            _transformParameters = new TransformParameters(RectangleF.Empty,
+                    new System.Drawing.Size(_width, _height),
+                    ScalingPolicy.Stretch, PixelFormat.Bgra32, ScalingQuality.FastBilinear);
+
             _writeableBitmap = new WriteableBitmap(
                 width,
                 height,
                 ScreenInfo.DpiX,
                 ScreenInfo.DpiY,
-                PixelFormats.Bgr24,
+                PixelFormats.Pbgra32,
                 null);
 
             RenderOptions.SetBitmapScalingMode(_writeableBitmap, BitmapScalingMode.NearestNeighbor);
@@ -128,60 +131,30 @@ namespace SimpleRtspPlayer.GUI.Views
 
         private static void OnVideoSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            var view = (VideoView) d;
+            var view = (VideoView)d;
 
             if (e.OldValue is IVideoSource oldVideoSource)
                 oldVideoSource.FrameReceived -= view.OnFrameReceived;
 
             if (e.NewValue is IVideoSource newVideoSource)
-            {
-                newVideoSource.SetVideoSize(view._width, view._height);
                 newVideoSource.FrameReceived += view.OnFrameReceived;
-            }
         }
 
         private void OnFrameReceived(object sender, IDecodedVideoFrame decodedFrame)
         {
-            if(_invalidateOperation != null && _invalidateOperation.Status != DispatcherOperationStatus.Completed)
-                return;
-
-            _invalidateOperation = Application.Current.Dispatcher.BeginInvoke(_invalidateAction, DispatcherPriority.Send, decodedFrame);
+            Application.Current.Dispatcher.Invoke(_invalidateAction, DispatcherPriority.Send, decodedFrame);
         }
 
         private void Invalidate(IDecodedVideoFrame decodedVideoFrame)
         {
-            if (decodedVideoFrame.Width != _width || decodedVideoFrame.Height != _height)
+            if (_width == 0 || _height == 0)
                 return;
 
             _writeableBitmap.Lock();
 
             try
             {
-                if (decodedVideoFrame.Stride == _writeableBitmap.BackBufferStride)
-                {
-                    Debug.Assert(decodedVideoFrame.DecodedBytes.Array != null,
-                        "decodedVideoFrame.DecodedBytes.Array != null");
-
-                    Marshal.Copy(decodedVideoFrame.DecodedBytes.Array, decodedVideoFrame.DecodedBytes.Offset,
-                        _writeableBitmap.BackBuffer, decodedVideoFrame.DecodedBytes.Count);
-                }
-                else
-                {
-                    IntPtr backBufferPtr = _writeableBitmap.BackBuffer;
-                    int srcOffset = decodedVideoFrame.DecodedBytes.Offset;
-
-                    for (int i = 0; i < decodedVideoFrame.Height; i++)
-                    {
-                        Debug.Assert(decodedVideoFrame.DecodedBytes.Array != null,
-                            "decodedVideoFrame.DecodedBytes.Array != null");
-
-                        Marshal.Copy(decodedVideoFrame.DecodedBytes.Array, srcOffset, backBufferPtr,
-                            decodedVideoFrame.Stride);
-
-                        srcOffset += decodedVideoFrame.Stride;
-                        backBufferPtr += _writeableBitmap.BackBufferStride;
-                    }
-                }
+                decodedVideoFrame.TransformTo(_writeableBitmap.BackBuffer, _writeableBitmap.BackBufferStride, _transformParameters);
 
                 _writeableBitmap.AddDirtyRect(_dirtyRect);
             }
@@ -193,23 +166,23 @@ namespace SimpleRtspPlayer.GUI.Views
 
         private static void OnFillColorPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            var view = (VideoView) d;
-            view._fillColor = (Color) e.NewValue;
+            var view = (VideoView)d;
+            view._fillColor = (System.Windows.Media.Color)e.NewValue;
         }
 
         private unsafe void UpdateBackgroundColor(IntPtr backBufferPtr, int backBufferStride)
         {
-            byte* pixels = (byte*) backBufferPtr;
+            byte* pixels = (byte*)backBufferPtr;
+            int color = _fillColor.A << 24 | _fillColor.R << 16 | _fillColor.G << 8 | _fillColor.B;
 
             Debug.Assert(pixels != null, nameof(pixels) + " != null");
 
             for (int i = 0; i < _height; i++)
-            for (int j = 0; j < _width; j++)
             {
-                int offset = i * backBufferStride + j;
-                pixels[offset++] = _fillColor.B;
-                pixels[offset++] = _fillColor.G;
-                pixels[offset] = _fillColor.R;
+                for (int j = 0; j < _width; j++)
+                    ((int*)pixels)[j] = color;
+
+                pixels += backBufferStride;
             }
         }
     }

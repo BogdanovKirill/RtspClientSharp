@@ -11,16 +11,14 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
     {
         private readonly IntPtr _decoderHandle;
         private readonly FFmpegVideoCodecId _videoCodecId;
-        private DateTime _currentDecodedFrameTimestamp;
 
         private DecodedVideoFrameParameters _currentFrameParameters =
             new DecodedVideoFrameParameters(0, 0, FFmpegPixelFormat.None);
 
-        private readonly Dictionary<PostVideoDecodingParameters, FFmpegDecodedVideoScaler> _scalersMap =
-            new Dictionary<PostVideoDecodingParameters, FFmpegDecodedVideoScaler>();
+        private readonly Dictionary<TransformParameters, FFmpegDecodedVideoScaler> _scalersMap =
+            new Dictionary<TransformParameters, FFmpegDecodedVideoScaler>();
 
         private byte[] _extraData = new byte[0];
-        private byte[] _decodedFrameBuffer = new byte[0];
         private bool _disposed;
 
         private FFmpegVideoDecoder(FFmpegVideoCodecId videoCodecId, IntPtr decoderHandle)
@@ -45,9 +43,8 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
             return new FFmpegVideoDecoder(videoCodecId, decoderPtr);
         }
 
-        public unsafe bool TryDecode(RawVideoFrame rawVideoFrame, out DecodedVideoFrameParameters frameParameters)
+        public unsafe IDecodedVideoFrame TryDecode(RawVideoFrame rawVideoFrame)
         {
-            Debug.Assert(rawVideoFrame.FrameSegment.Array != null, "rawVideoFrame.FrameSegment.Array != null");
             fixed (byte* rawBufferPtr = &rawVideoFrame.FrameSegment.Array[rawVideoFrame.FrameSegment.Offset])
             {
                 int resultCode;
@@ -66,7 +63,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                         fixed (byte* initDataPtr = &_extraData[0])
                         {
                             resultCode = FFmpegVideoPInvoke.SetVideoDecoderExtraData(_decoderHandle,
-                                (IntPtr) initDataPtr, _extraData.Length);
+                                (IntPtr)initDataPtr, _extraData.Length);
 
                             if (resultCode != 0)
                                 throw new DecoderException(
@@ -75,17 +72,12 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                     }
                 }
 
-                resultCode = FFmpegVideoPInvoke.DecodeFrame(_decoderHandle, (IntPtr) rawBufferPtr,
+                resultCode = FFmpegVideoPInvoke.DecodeFrame(_decoderHandle, (IntPtr)rawBufferPtr,
                     rawVideoFrame.FrameSegment.Count,
                     out int width, out int height, out FFmpegPixelFormat pixelFormat);
 
                 if (resultCode != 0)
-                {
-                    frameParameters = null;
-                    return false;
-                }
-
-                _currentDecodedFrameTimestamp = rawVideoFrame.Timestamp;
+                    return null;
 
                 if (_currentFrameParameters.Width != width || _currentFrameParameters.Height != height ||
                     _currentFrameParameters.PixelFormat != pixelFormat)
@@ -94,38 +86,8 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                     DropAllVideoScalers();
                 }
 
-                frameParameters = _currentFrameParameters;
-                return true;
+                return new DecodedVideoFrame(TransformTo);
             }
-        }
-
-        public unsafe IDecodedVideoFrame GetDecodedFrame(PostVideoDecodingParameters parameters)
-        {
-            if (!_scalersMap.TryGetValue(parameters, out FFmpegDecodedVideoScaler videoScaler))
-            {
-                videoScaler = FFmpegDecodedVideoScaler.Create(_currentFrameParameters, parameters);
-                _scalersMap.Add(parameters, videoScaler);
-            }
-
-            int resultCode;
-
-            int bufferSize = parameters.TargetFrameSize.Height *
-                             ImageUtils.GetStride(parameters.TargetFrameSize.Width, parameters.TargetFormat);
-
-            if (_decodedFrameBuffer.Length < bufferSize)
-                _decodedFrameBuffer = new byte[bufferSize];
-
-            fixed (byte* scaledBuffer = _decodedFrameBuffer)
-                resultCode = FFmpegVideoPInvoke.ScaleDecodedVideoFrame(_decoderHandle, videoScaler.Handle, (IntPtr) scaledBuffer, videoScaler.ScaledStride);
-
-            if (resultCode != 0)
-                throw new DecoderException(
-                    $"An error occurred while converting decoding video frame, {_videoCodecId} codec, code: {resultCode}");
-
-            return new DecodedVideoFrame(_currentDecodedFrameTimestamp, new ArraySegment<byte>(_decodedFrameBuffer, 0, bufferSize), _currentFrameParameters.Width,
-                _currentFrameParameters.Height,
-                videoScaler.ScaledWidth, videoScaler.ScaledHeight, videoScaler.ScaledPixelFormat,
-                videoScaler.ScaledStride);
         }
 
         public void Dispose()
@@ -145,6 +107,20 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                 scaler.Dispose();
 
             _scalersMap.Clear();
+        }
+
+        private void TransformTo(IntPtr buffer, int bufferStride, TransformParameters parameters)
+        {
+            if (!_scalersMap.TryGetValue(parameters, out FFmpegDecodedVideoScaler videoScaler))
+            {
+                videoScaler = FFmpegDecodedVideoScaler.Create(_currentFrameParameters, parameters);
+                _scalersMap.Add(parameters, videoScaler);
+            }
+
+            int resultCode = FFmpegVideoPInvoke.ScaleDecodedVideoFrame(_decoderHandle, videoScaler.Handle, buffer, bufferStride);
+
+            if (resultCode != 0)
+                throw new DecoderException($"An error occurred while converting decoding video frame, {_videoCodecId} codec, code: {resultCode}");
         }
     }
 }

@@ -4,26 +4,16 @@ namespace SimpleRtspPlayer.RawFramesDecoding.DecodedFrames
 {
     class DecodedVideoFrame : IDecodedVideoFrame
     {
-        public DateTime Timestamp { get; }
-        public ArraySegment<byte> DecodedBytes { get; }
-        public int OriginalWidth { get; }
-        public int OriginalHeight { get; }
-        public int Width { get; }
-        public int Height { get; }
-        public PixelFormat Format { get; }
-        public int Stride { get; }
+        private readonly Action<IntPtr, int, TransformParameters> _transformAction;
 
-        public DecodedVideoFrame(DateTime timestamp, ArraySegment<byte> decodedBytes, int originalWidth,
-            int originalHeight, int width, int height, PixelFormat format, int stride)
+        public DecodedVideoFrame(Action<IntPtr, int, TransformParameters> transformAction)
         {
-            Timestamp = timestamp;
-            DecodedBytes = decodedBytes;
-            OriginalWidth = originalWidth;
-            OriginalHeight = originalHeight;
-            Width = width;
-            Height = height;
-            Format = format;
-            Stride = stride;
+            _transformAction = transformAction;
+        }
+
+        public void TransformTo(IntPtr buffer, int bufferStride, TransformParameters transformParameters)
+        {
+            _transformAction(buffer, bufferStride, transformParameters);
         }
     }
 }

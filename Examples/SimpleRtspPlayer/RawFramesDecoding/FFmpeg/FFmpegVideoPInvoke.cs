@@ -22,19 +22,9 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
     enum FFmpegPixelFormat
     {
         None = -1,
-        YUV420P = 0,
-        YUYV422 = 1,
-        RGB24 = 2,
         BGR24 = 3,
-        YUV422P = 4,
-        YUV444P = 5,
-        YUV410P = 6,
-        YUV411P = 7,
         GRAY8 = 8,
-        ARGB = 27,
-        RGBA = 28,
-        ABGR = 29,
-        BGRA = 30
+        BGRA = 28
     }
 
     static class FFmpegVideoPInvoke

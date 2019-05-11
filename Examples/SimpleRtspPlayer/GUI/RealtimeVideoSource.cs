@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Threading;
 using RtspClientSharp.RawFrames;
 using RtspClientSharp.RawFrames.Video;
-using SimpleRtspPlayer.RawFramesDecoding;
 using SimpleRtspPlayer.RawFramesDecoding.DecodedFrames;
 using SimpleRtspPlayer.RawFramesDecoding.FFmpeg;
 using SimpleRtspPlayer.RawFramesReceiving;
@@ -17,8 +14,6 @@ namespace SimpleRtspPlayer.GUI
 
         private readonly Dictionary<FFmpegVideoCodecId, FFmpegVideoDecoder> _videoDecodersMap =
             new Dictionary<FFmpegVideoCodecId, FFmpegVideoDecoder>();
-
-        private long _desiredSize;
 
         public event EventHandler<IDecodedVideoFrame> FrameReceived;
 
@@ -36,12 +31,6 @@ namespace SimpleRtspPlayer.GUI
                 return;
 
             rawFramesSource.FrameReceived += OnFrameReceived;
-        }
-
-        public void SetVideoSize(int width, int height)
-        {
-            long desiredSize = (long) width << 32 | (uint) height;
-            Interlocked.Exchange(ref _desiredSize, desiredSize);
         }
 
         public void Dispose()
@@ -64,32 +53,10 @@ namespace SimpleRtspPlayer.GUI
 
             FFmpegVideoDecoder decoder = GetDecoderForFrame(rawVideoFrame);
 
-            if (!decoder.TryDecode(rawVideoFrame, out DecodedVideoFrameParameters decodedFrameParameters))
-                return;
+            IDecodedVideoFrame decodedFrame = decoder.TryDecode(rawVideoFrame);
 
-            long desiredSize = Interlocked.Read(ref _desiredSize);
-
-            int targetWidth;
-            int targetHeight;
-
-            if (desiredSize == 0)
-            {
-                targetWidth = decodedFrameParameters.Width;
-                targetHeight = decodedFrameParameters.Height;
-            }
-            else
-            {
-                targetWidth = (int) (desiredSize >> 32);
-                targetHeight = (int) desiredSize;
-            }
-
-            var postVideoDecodingParameters = new PostVideoDecodingParameters(RectangleF.Empty,
-                new Size(targetWidth, targetHeight),
-                ScalingPolicy.Stretch, PixelFormat.Bgr24, ScalingQuality.Bicubic);
-
-            IDecodedVideoFrame decodedFrame = decoder.GetDecodedFrame(postVideoDecodingParameters);
-
-            FrameReceived?.Invoke(this, decodedFrame);
+            if (decodedFrame != null)
+                FrameReceived?.Invoke(this, decodedFrame);
         }
 
         private FFmpegVideoDecoder GetDecoderForFrame(RawVideoFrame videoFrame)

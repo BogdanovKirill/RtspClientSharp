@@ -4,6 +4,7 @@
     {
         Nearest,
         Bilinear,
+        FastBilinear,
         Bicubic
     }
 }

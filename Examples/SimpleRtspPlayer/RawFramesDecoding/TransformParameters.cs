@@ -2,7 +2,7 @@
 
 namespace SimpleRtspPlayer.RawFramesDecoding
 {
-    public class PostVideoDecodingParameters
+    public class TransformParameters
     {
         public RectangleF RegionOfInterest { get; }
 
@@ -14,7 +14,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding
 
         public ScalingQuality ScaleQuality { get; }
 
-        public PostVideoDecodingParameters(RectangleF regionOfInterest, Size targetFrameSize, ScalingPolicy scalePolicy,
+        public TransformParameters(RectangleF regionOfInterest, Size targetFrameSize, ScalingPolicy scalePolicy,
             PixelFormat targetFormat, ScalingQuality scaleQuality)
         {
             RegionOfInterest = regionOfInterest;
@@ -24,7 +24,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding
             ScalePolicy = scalePolicy;
         }
 
-        protected bool Equals(PostVideoDecodingParameters other)
+        protected bool Equals(TransformParameters other)
         {
             return RegionOfInterest.Equals(other.RegionOfInterest) &&
                    TargetFrameSize.Equals(other.TargetFrameSize) &&
@@ -36,7 +36,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((PostVideoDecodingParameters) obj);
+            return Equals((TransformParameters) obj);
         }
 
         public override int GetHashCode()

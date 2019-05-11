@@ -9,7 +9,7 @@ namespace SimpleRtspPlayer.GUI.Models
         private readonly RealtimeVideoSource _realtimeVideoSource = new RealtimeVideoSource();
         private readonly RealtimeAudioSource _realtimeAudioSource = new RealtimeAudioSource();
 
-        private RawFramesSource _rawFramesSource;
+        private IRawFramesSource _rawFramesSource;
 
         public event EventHandler<string> StatusChanged;
 

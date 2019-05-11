@@ -10,7 +10,6 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
         public IntPtr Handle { get; }
         public int ScaledWidth { get; }
         public int ScaledHeight { get; }
-        public int ScaledStride { get; }
         public PixelFormat ScaledPixelFormat { get; }
 
         private FFmpegDecodedVideoScaler(IntPtr handle, int scaledWidth, int scaledHeight,
@@ -20,7 +19,6 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
             ScaledWidth = scaledWidth;
             ScaledHeight = scaledHeight;
             ScaledPixelFormat = scaledPixelFormat;
-            ScaledStride = ImageUtils.GetStride(scaledWidth, scaledPixelFormat);
         }
 
         ~FFmpegDecodedVideoScaler()
@@ -30,12 +28,12 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
         /// <exception cref="DecoderException"></exception>
         public static FFmpegDecodedVideoScaler Create(DecodedVideoFrameParameters decodedVideoFrameParameters,
-            PostVideoDecodingParameters postVideoDecodingParameters)
+            TransformParameters transformParameters)
         {
             if (decodedVideoFrameParameters == null)
                 throw new ArgumentNullException(nameof(decodedVideoFrameParameters));
-            if (postVideoDecodingParameters == null)
-                throw new ArgumentNullException(nameof(postVideoDecodingParameters));
+            if (transformParameters == null)
+                throw new ArgumentNullException(nameof(transformParameters));
 
             int sourceLeft = 0;
             int sourceTop = 0;
@@ -44,24 +42,24 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
             int scaledWidth = decodedVideoFrameParameters.Width;
             int scaledHeight = decodedVideoFrameParameters.Height;
 
-            if (!postVideoDecodingParameters.RegionOfInterest.IsEmpty)
+            if (!transformParameters.RegionOfInterest.IsEmpty)
             {
                 sourceLeft =
-                    (int) (decodedVideoFrameParameters.Width * postVideoDecodingParameters.RegionOfInterest.Left);
+                    (int) (decodedVideoFrameParameters.Width * transformParameters.RegionOfInterest.Left);
                 sourceTop =
-                    (int) (decodedVideoFrameParameters.Height * postVideoDecodingParameters.RegionOfInterest.Top);
+                    (int) (decodedVideoFrameParameters.Height * transformParameters.RegionOfInterest.Top);
                 sourceWidth =
-                    (int) (decodedVideoFrameParameters.Width * postVideoDecodingParameters.RegionOfInterest.Width);
+                    (int) (decodedVideoFrameParameters.Width * transformParameters.RegionOfInterest.Width);
                 sourceHeight =
-                    (int) (decodedVideoFrameParameters.Height * postVideoDecodingParameters.RegionOfInterest.Height);
+                    (int) (decodedVideoFrameParameters.Height * transformParameters.RegionOfInterest.Height);
             }
 
-            if (!postVideoDecodingParameters.TargetFrameSize.IsEmpty)
+            if (!transformParameters.TargetFrameSize.IsEmpty)
             {
-                scaledWidth = postVideoDecodingParameters.TargetFrameSize.Width;
-                scaledHeight = postVideoDecodingParameters.TargetFrameSize.Height;
+                scaledWidth = transformParameters.TargetFrameSize.Width;
+                scaledHeight = transformParameters.TargetFrameSize.Height;
 
-                ScalingPolicy scalingPolicy = postVideoDecodingParameters.ScalePolicy;
+                ScalingPolicy scalingPolicy = transformParameters.ScalePolicy;
 
                 float srcAspectRatio = (float) sourceWidth / sourceHeight;
                 float destAspectRatio = (float) scaledWidth / scaledHeight;
@@ -84,9 +82,9 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                 }
             }
 
-            PixelFormat scaledPixelFormat = postVideoDecodingParameters.TargetFormat;
+            PixelFormat scaledPixelFormat = transformParameters.TargetFormat;
             FFmpegPixelFormat scaledFFmpegPixelFormat = GetFFmpegPixelFormat(scaledPixelFormat);
-            FFmpegScalingQuality scaleQuality = GetFFmpegScaleQuality(postVideoDecodingParameters.ScaleQuality);
+            FFmpegScalingQuality scaleQuality = GetFFmpegScaleQuality(transformParameters.ScaleQuality);
 
             int resultCode = FFmpegVideoPInvoke.CreateVideoScaler(sourceLeft, sourceTop, sourceWidth, sourceHeight,
                 decodedVideoFrameParameters.PixelFormat,
@@ -114,6 +112,8 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                 return FFmpegScalingQuality.Point;
             if (scalingQuality == ScalingQuality.Bilinear)
                 return FFmpegScalingQuality.Bilinear;
+            if (scalingQuality == ScalingQuality.FastBilinear)
+                return FFmpegScalingQuality.FastBilinear;
             if (scalingQuality == ScalingQuality.Bicubic)
                 return FFmpegScalingQuality.Bicubic;
 
@@ -122,7 +122,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
         private static FFmpegPixelFormat GetFFmpegPixelFormat(PixelFormat pixelFormat)
         {
-            if (pixelFormat == PixelFormat.Abgr32)
+            if (pixelFormat == PixelFormat.Bgra32)
                 return FFmpegPixelFormat.BGRA;
             if (pixelFormat == PixelFormat.Grayscale)
                 return FFmpegPixelFormat.GRAY8;

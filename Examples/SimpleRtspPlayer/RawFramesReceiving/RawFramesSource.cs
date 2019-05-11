@@ -27,13 +27,18 @@ namespace SimpleRtspPlayer.RawFramesReceiving
         public void Start()
         {
             _cancellationTokenSource = new CancellationTokenSource();
-            _workTask = Task.Run(() => ReceiveAsync(_cancellationTokenSource.Token));
+
+            CancellationToken token = _cancellationTokenSource.Token;
+
+            _workTask = _workTask.ContinueWith(async p =>
+            {
+                await ReceiveAsync(token);
+            }, token);
         }
 
         public void Stop()
         {
             _cancellationTokenSource.Cancel();
-            _workTask.Wait();
         }
 
         private async Task ReceiveAsync(CancellationToken token)

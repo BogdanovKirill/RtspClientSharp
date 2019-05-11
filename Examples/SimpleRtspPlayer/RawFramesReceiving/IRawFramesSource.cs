@@ -7,5 +7,8 @@ namespace SimpleRtspPlayer.RawFramesReceiving
     {
         EventHandler<RawFrame> FrameReceived { get; set; }
         EventHandler<string> ConnectionStatusChanged { get; set; }
+
+        void Start();
+        void Stop();
     }
 }
