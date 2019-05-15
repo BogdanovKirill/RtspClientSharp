@@ -72,3 +72,9 @@ If this project help you reduce time to develop, you can give me a cup of coffee
 You could also make per-feature donations, write me to bogdanov.kv@bk.ru
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://paypal.me/bogdanovkv)
+
+## Backers
+Thank you to all project backers! Especially for:
+Roman Minyaylov
+Dat Ta
+Michael Norman
