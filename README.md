@@ -75,6 +75,6 @@ You could also make per-feature donations, write me to bogdanov.kv@bk.ru
 
 ## Backers
 Thank you to all project backers! Especially for:
-Roman Minyaylov
-Dat Ta
-Michael Norman
+- Roman Minyaylov
+- Dat Ta
+- Michael Norman
