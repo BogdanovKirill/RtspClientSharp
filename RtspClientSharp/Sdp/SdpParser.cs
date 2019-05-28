@@ -60,15 +60,21 @@ namespace RtspClientSharp.Sdp
 
         private void ParseMediaLine(string line)
         {
-            int lastSpaceIndex = line.LastIndexOf(' ');
+            string[] tokens = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-            if (lastSpaceIndex == -1)
+            if (tokens.Length < 4)
+            {
+                _lastParsedFormatInfo = null;
                 return;
+            }
 
-            string payloadFormat = line.Substring(lastSpaceIndex);
+            string payloadFormat = tokens[3];
 
             if (!int.TryParse(payloadFormat, out int payloadFormatNumber))
+            {
+                _lastParsedFormatInfo = null;
                 return;
+            }
 
             CodecInfo codecInfo = TryCreateCodecInfo(payloadFormatNumber);
             int samplesFrequency = GetSamplesFrequencyFromPayloadType(payloadFormatNumber);
