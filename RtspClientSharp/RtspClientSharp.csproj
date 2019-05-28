@@ -18,11 +18,9 @@
 	<RequireLicenseAcceptance>false</RequireLicenseAcceptance>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
     <Copyright>Copyright ©2019 Kirill Bogdanov</Copyright>
-    <Version>1.2.7</Version>
-    <PackageReleaseNotes>-Wrong offset in AAC parser was fixed
--Un-escape username and password (thank you to izfo):
-
-https://github.com/BogdanovKirill/RtspClientSharp/pull/25</PackageReleaseNotes>
+    <Version>1.2.8</Version>
+    <PackageReleaseNotes>-Wrong SDP answer with extra space in media line should be also parsed correctly
+https://github.com/BogdanovKirill/RtspClientSharp/issues/33</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
