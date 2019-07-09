@@ -37,7 +37,7 @@ namespace RtspClientSharp.MediaParsers
             _h264Parser = new H264Parser(() => GetFrameTimestamp(_timeOffset)) {FrameGenerated = OnFrameGenerated};
 
             if (codecInfo.SpsPpsBytes.Length != 0)
-                _h264Parser.Parse(new ArraySegment<byte>(codecInfo.SpsPpsBytes), false, false);
+                _h264Parser.Parse(new ArraySegment<byte>(codecInfo.SpsPpsBytes), false);
 
             _nalStream = new MemoryStream(8 * 1024);
         }
@@ -74,7 +74,7 @@ namespace RtspClientSharp.MediaParsers
                     ParseMTAP(byteSegment, 3, markerBit);
                     break;
                 default:
-                    _h264Parser.Parse(byteSegment, false, markerBit);
+                    _h264Parser.Parse(byteSegment, markerBit);
                     break;
             }
         }
@@ -113,7 +113,7 @@ namespace RtspClientSharp.MediaParsers
 
                 if (endFlag)
                 {
-                    _h264Parser.Parse(nalUnitSegment, true, markerBit);
+                    _h264Parser.Parse(nalUnitSegment, markerBit);
                     _waitForStartFu = true;
                 }
                 else
@@ -133,7 +133,7 @@ namespace RtspClientSharp.MediaParsers
             {
                 var nalUnitSegment = new ArraySegment<byte>(_nalStream.GetBuffer(), 0, (int)_nalStream.Position);
                 _nalStream.Position = 0;
-                _h264Parser.Parse(nalUnitSegment, true, markerBit);
+                _h264Parser.Parse(nalUnitSegment, markerBit);
                 _waitForStartFu = true;
             }
         }
@@ -156,7 +156,7 @@ namespace RtspClientSharp.MediaParsers
 
                 startOffset += nalUnitSize;
 
-                _h264Parser.Parse(nalUnitSegment, true, markerBit && startOffset >= endOffset);
+                _h264Parser.Parse(nalUnitSegment, markerBit && startOffset >= endOffset);
             }
         }
 
@@ -180,7 +180,7 @@ namespace RtspClientSharp.MediaParsers
 
                 startOffset += nalUnitSize;
 
-                _h264Parser.Parse(nalUnitSegment, true, markerBit && startOffset >= endOffset);
+                _h264Parser.Parse(nalUnitSegment, markerBit && startOffset >= endOffset);
             }
         }
     }

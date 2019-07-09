@@ -39,19 +39,13 @@ namespace RtspClientSharp.MediaParsers
             _frameStream = new MemoryStream(8 * 1024);
         }
 
-        public void Parse(ArraySegment<byte> byteSegment, bool dontSliceForce,
-            bool generateFrame)
+        public void Parse(ArraySegment<byte> byteSegment, bool generateFrame)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
             if (ArrayUtils.StartsWith(byteSegment.Array, byteSegment.Offset, byteSegment.Count,
                 RawH264Frame.StartMarker))
-            {
-                if (dontSliceForce)
-                    ProcessNalUnit(byteSegment, true, generateFrame);
-                else
-                    H264Slicer.Slice(byteSegment, SlicerOnNalUnitFound);
-            }
+                H264Slicer.Slice(byteSegment, SlicerOnNalUnitFound);
             else
                 ProcessNalUnit(byteSegment, false, false);
 
