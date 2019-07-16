@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 
 namespace RtspClientSharp.Utils
 {
@@ -10,23 +11,30 @@ namespace RtspClientSharp.Utils
 
         public static Socket CreateTcpClient()
         {
-            return new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp)
+            var socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp)
             {
-                SendBufferSize = 0,
                 ReceiveBufferSize = TcpReceiveBufferDefaultSize,
                 DualMode = true,
                 NoDelay = true
             };
+
+            if (Environment.OSVersion.Platform != PlatformID.MacOSX)
+                socket.SendBufferSize = 0;
+
+            return socket;
         }
 
         public static Socket CreateUdpClient()
         {
             var socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp)
             {
-                SendBufferSize = 0,
                 DualMode = true
             };
             socket.IOControl((IOControlCode)SIO_UDP_CONNRESET, EmptyOptionInValue, null);
+
+            if (Environment.OSVersion.Platform != PlatformID.MacOSX)
+                socket.SendBufferSize = 0;
+
             return socket;
         }
     }
