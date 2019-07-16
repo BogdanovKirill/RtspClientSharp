@@ -14,8 +14,7 @@
 - Asynchronous nature with cancellation tokens support
 - Designed to be fast and scaleable
 - Low GC pressure during receive stage (when RTSP session is established); low amount of freezes under high load</Description>
-    <PackageLicenseUrl>https://raw.githubusercontent.com/BogdanovKirill/RtspClientSharp/master/LICENSE.md?raw=true</PackageLicenseUrl>
-	<RequireLicenseAcceptance>false</RequireLicenseAcceptance>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
     <Copyright>Copyright ©2019 Kirill Bogdanov</Copyright>
     <Version>1.3.0</Version>
@@ -27,7 +26,7 @@
     <Platforms>AnyCPU;x64;x86</Platforms>
     <Configurations>Debug;Release;Publish</Configurations>
     <AssemblyOriginatorKeyFile>signkey.pfx</AssemblyOriginatorKeyFile>
-    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
