@@ -22,17 +22,33 @@
     <PackageReleaseNotes>-Small bug fix: QOP is not set in digest authenticator when it's value doesn't have comma</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
     <Platforms>AnyCPU;x64;x86</Platforms>
+    <Configurations>Debug;Release;Publish</Configurations>
+    <AssemblyOriginatorKeyFile>signkey.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DocumentationFile>bin\Release\netstandard2.0\RtspClientSharp.xml</DocumentationFile>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(Configuration)'=='Publish'">
+    <DocumentationFile>bin\Release\netstandard2.0\RtspClientSharp.xml</DocumentationFile>
+	<SignAssembly>true</SignAssembly>
+	<DefineConstants>TRACE;PUBLISH</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
     <DocumentationFile>bin\Release\netstandard2.0\RtspClientSharp.xml</DocumentationFile>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Publish|x86'">
+    <DocumentationFile>bin\Release\netstandard2.0\RtspClientSharp.xml</DocumentationFile>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <DocumentationFile>bin\Release\netstandard2.0\RtspClientSharp.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Publish|x64'">
     <DocumentationFile>bin\Release\netstandard2.0\RtspClientSharp.xml</DocumentationFile>
   </PropertyGroup>
 
