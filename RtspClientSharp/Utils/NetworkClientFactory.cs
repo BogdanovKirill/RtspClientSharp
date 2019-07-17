@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 
 namespace RtspClientSharp.Utils
 {
@@ -17,10 +16,6 @@ namespace RtspClientSharp.Utils
                 DualMode = true,
                 NoDelay = true
             };
-
-            if (Environment.OSVersion.Platform != PlatformID.MacOSX)
-                socket.SendBufferSize = 0;
-
             return socket;
         }
 
@@ -31,10 +26,6 @@ namespace RtspClientSharp.Utils
                 DualMode = true
             };
             socket.IOControl((IOControlCode)SIO_UDP_CONNRESET, EmptyOptionInValue, null);
-
-            if (Environment.OSVersion.Platform != PlatformID.MacOSX)
-                socket.SendBufferSize = 0;
-
             return socket;
         }
     }
