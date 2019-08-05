@@ -17,11 +17,8 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
     <Copyright>Copyright ©2019 Kirill Bogdanov</Copyright>
-    <Version>1.3.0</Version>
-    <PackageReleaseNotes>-Offering some performance improvements over 1.2 version
--Sign for this library was added (#23)
--Bug fix for parsing NAL units  from cheap IP cameras (#36)
--Intialization bug fixes under MacOS/tvOS (#38)</PackageReleaseNotes>
+    <Version>1.3.1</Version>
+    <PackageReleaseNotes>-Bug fix: previous nuget was without sign and compiled for x86, not for any cpu</PackageReleaseNotes>
     <RepositoryType>git</RepositoryType>
     <Platforms>AnyCPU;x64;x86</Platforms>
     <Configurations>Debug;Release;Publish</Configurations>
