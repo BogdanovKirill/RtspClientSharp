@@ -47,7 +47,7 @@ namespace RtspClientSharp.MediaParsers
                 RawH264Frame.StartMarker))
                 H264Slicer.Slice(byteSegment, SlicerOnNalUnitFound);
             else
-                ProcessNalUnit(byteSegment, false, false);
+                ProcessNalUnit(byteSegment, false, ref generateFrame);
 
             if (generateFrame)
                 TryGenerateFrame();
@@ -104,10 +104,11 @@ namespace RtspClientSharp.MediaParsers
 
         private void SlicerOnNalUnitFound(ArraySegment<byte> byteSegment)
         {
-            ProcessNalUnit(byteSegment, true, false);
+            bool generateFrame = false;
+            ProcessNalUnit(byteSegment, true, ref generateFrame);
         }
 
-        private void ProcessNalUnit(ArraySegment<byte> byteSegment, bool hasStartMarker, bool generateFrame)
+        private void ProcessNalUnit(ArraySegment<byte> byteSegment, bool hasStartMarker, ref bool generateFrame)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
@@ -141,7 +142,10 @@ namespace RtspClientSharp.MediaParsers
                 return;
 
             if (generateFrame && _frameStream.Position == 0)
+            {
+                generateFrame = false;
                 TryGenerateFrame(byteSegment);
+            }
             else
             {
                 if (!hasStartMarker)
