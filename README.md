@@ -78,3 +78,6 @@ Thank you to all project backers! Especially for:
 - Roman Minyaylov
 - Dat Ta
 - Michael Norman
+
+## Sponsors
+[![jetbrains](https://github.com/JetBrains/logos/blob/master/web/jetbrains/jetbrains.svg)](https://www.jetbrains.com/?from=RtspClientSharp)
