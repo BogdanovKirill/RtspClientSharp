@@ -9,6 +9,7 @@ namespace RtspClientSharp.MediaParsers
     class MJPEGVideoPayloadParser : MediaPayloadParser
     {
         private const int JpegHeaderSize = 8;
+        private const int JpegMaxSize = 16 * 1024 * 1024;
 
         private static readonly ArraySegment<byte> JpegEndMarkerByteSegment =
             new ArraySegment<byte>(RawJpegFrame.EndMarkerBytes);
@@ -128,7 +129,6 @@ namespace RtspClientSharp.MediaParsers
 
         private byte[] _quantizationTables = new byte[0];
         private int _quantizationTablesLength;
-        private TimeSpan _previousTimeOffset = TimeSpan.MinValue;
 
         public MJPEGVideoPayloadParser()
         {
@@ -141,11 +141,6 @@ namespace RtspClientSharp.MediaParsers
 
             if (byteSegment.Count < JpegHeaderSize)
                 throw new MediaPayloadParserException("Input data size is smaller than JPEG header size");
-
-            if (_previousTimeOffset != timeOffset && _frameStream.Position != 0)
-                _frameStream.Position = 0;
-
-            _previousTimeOffset = timeOffset;
 
             int offset = byteSegment.Offset + 1;
 
@@ -216,6 +211,9 @@ namespace RtspClientSharp.MediaParsers
             if (fragmentOffset != 0 && _frameStream.Position == 0)
                 return;
 
+            if (_frameStream.Position > JpegMaxSize)
+                throw new MediaPayloadParserException($"Jpeg frame is too large, more than {JpegMaxSize / (1024 * 1024)} Mb");
+
             int dataSize = byteSegment.Offset + byteSegment.Count - offset;
 
             if (dataSize < 0)
@@ -270,7 +268,7 @@ namespace RtspClientSharp.MediaParsers
                 else if (newVal > 255)
                     newVal = 255;
 
-                _quantizationTables[i] = (byte) newVal;
+                _quantizationTables[i] = (byte)newVal;
             }
         }
 
@@ -296,10 +294,10 @@ namespace RtspClientSharp.MediaParsers
             buffer[offset++] = 0xe0;
             buffer[offset++] = 0x00;
             buffer[offset++] = 0x10;
-            buffer[offset++] = (byte) 'J';
-            buffer[offset++] = (byte) 'F';
-            buffer[offset++] = (byte) 'I';
-            buffer[offset++] = (byte) 'F';
+            buffer[offset++] = (byte)'J';
+            buffer[offset++] = (byte)'F';
+            buffer[offset++] = (byte)'I';
+            buffer[offset++] = (byte)'F';
             buffer[offset++] = 0x00;
             buffer[offset++] = 0x01;
             buffer[offset++] = 0x01;
@@ -317,15 +315,15 @@ namespace RtspClientSharp.MediaParsers
                 buffer[offset++] = 0xdd;
                 buffer[offset++] = 0x00;
                 buffer[offset++] = 0x04;
-                buffer[offset++] = (byte) (dri >> 8);
-                buffer[offset++] = (byte) dri;
+                buffer[offset++] = (byte)(dri >> 8);
+                buffer[offset++] = (byte)dri;
             }
 
             int tableSize = qtablesCount == 1 ? _quantizationTablesLength : _quantizationTablesLength / 2;
             buffer[offset++] = 0xFF;
             buffer[offset++] = 0xdb;
             buffer[offset++] = 0x00;
-            buffer[offset++] = (byte) (tableSize + 3);
+            buffer[offset++] = (byte)(tableSize + 3);
             buffer[offset++] = 0x00;
 
             int qtablesOffset = 0;
@@ -340,7 +338,7 @@ namespace RtspClientSharp.MediaParsers
                 buffer[offset++] = 0xFF;
                 buffer[offset++] = 0xdb;
                 buffer[offset++] = 0x00;
-                buffer[offset++] = (byte) (tableSize + 3);
+                buffer[offset++] = (byte)(tableSize + 3);
                 buffer[offset++] = 0x01;
                 Buffer.BlockCopy(_quantizationTables, qtablesOffset, buffer, offset, tableSize);
                 offset += tableSize;
@@ -351,20 +349,20 @@ namespace RtspClientSharp.MediaParsers
             buffer[offset++] = 0x00;
             buffer[offset++] = 0x11;
             buffer[offset++] = 0x08;
-            buffer[offset++] = (byte) (height >> 8);
-            buffer[offset++] = (byte) height;
-            buffer[offset++] = (byte) (width >> 8);
-            buffer[offset++] = (byte) width;
+            buffer[offset++] = (byte)(height >> 8);
+            buffer[offset++] = (byte)height;
+            buffer[offset++] = (byte)(width >> 8);
+            buffer[offset++] = (byte)width;
             buffer[offset++] = 0x03;
             buffer[offset++] = 0x01;
-            buffer[offset++] = (type & 1) != 0 ? (byte) 0x22 : (byte) 0x21;
+            buffer[offset++] = (type & 1) != 0 ? (byte)0x22 : (byte)0x21;
             buffer[offset++] = 0x00;
             buffer[offset++] = 0x02;
             buffer[offset++] = 0x11;
-            buffer[offset++] = qtablesCount == 1 ? (byte) 0x00 : (byte) 0x01;
+            buffer[offset++] = qtablesCount == 1 ? (byte)0x00 : (byte)0x01;
             buffer[offset++] = 0x03;
             buffer[offset++] = 0x11;
-            buffer[offset++] = qtablesCount == 1 ? (byte) 0x00 : (byte) 0x01;
+            buffer[offset++] = qtablesCount == 1 ? (byte)0x00 : (byte)0x01;
 
             CreateHuffmanHeader(buffer, offset, LumDcCodelens, LumDcCodelens.Length, LumDcSymbols, LumDcSymbols.Length,
                 0, 0);
@@ -404,8 +402,8 @@ namespace RtspClientSharp.MediaParsers
             buffer[offset++] = 0xff;
             buffer[offset++] = 0xc4;
             buffer[offset++] = 0;
-            buffer[offset++] = (byte) (3 + ncodes + nsymbols);
-            buffer[offset++] = (byte) ((tableClass << 4) | tableNo);
+            buffer[offset++] = (byte)(3 + ncodes + nsymbols);
+            buffer[offset++] = (byte)((tableClass << 4) | tableNo);
             Buffer.BlockCopy(codelens, 0, buffer, offset, ncodes);
             offset += ncodes;
             Buffer.BlockCopy(symbols, 0, buffer, offset, nsymbols);
@@ -413,14 +411,12 @@ namespace RtspClientSharp.MediaParsers
 
         private void GenerateFrame(TimeSpan timeOffset)
         {
-            int frameSize = (int) _frameStream.Position;
-
-            if (!ArrayUtils.EndsWith(_frameStream.GetBuffer(),0,
-                frameSize, RawJpegFrame.EndMarkerBytes))
+            if (!ArrayUtils.EndsWith(_frameStream.GetBuffer(), 0,
+                (int)_frameStream.Position, RawJpegFrame.EndMarkerBytes))
                 _frameStream.Write(JpegEndMarkerByteSegment.Array, JpegEndMarkerByteSegment.Offset, JpegEndMarkerByteSegment.Count);
 
             DateTime timestamp = GetFrameTimestamp(timeOffset);
-            var frameBytes = new ArraySegment<byte>(_frameStream.GetBuffer(), 0, frameSize);
+            var frameBytes = new ArraySegment<byte>(_frameStream.GetBuffer(), 0, (int)_frameStream.Position);
             _frameStream.Position = 0;
 
             var frame = new RawJpegFrame(timestamp, frameBytes);
