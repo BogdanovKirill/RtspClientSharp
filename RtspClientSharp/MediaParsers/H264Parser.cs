@@ -141,8 +141,18 @@ namespace RtspClientSharp.MediaParsers
             if (nri || nalUnitType == 6)
                 return;
 
-            if (generateFrame && hasStartMarker && _frameStream.Position == 0)
+            if (generateFrame && (hasStartMarker || byteSegment.Offset >= StartMarkerSegment.Count) && _frameStream.Position == 0)
             {
+                if (!hasStartMarker)
+                {
+                    int newOffset = byteSegment.Offset - StartMarkerSegment.Count;
+
+                    Buffer.BlockCopy(StartMarkerSegment.Array, StartMarkerSegment.Offset,
+                        byteSegment.Array, newOffset, StartMarkerSegment.Count);
+
+                    byteSegment = new ArraySegment<byte>(byteSegment.Array, newOffset, byteSegment.Count + StartMarkerSegment.Count);
+                }
+
                 generateFrame = false;
                 TryGenerateFrame(byteSegment);
             }
