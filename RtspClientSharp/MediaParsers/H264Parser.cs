@@ -141,7 +141,7 @@ namespace RtspClientSharp.MediaParsers
             if (nri || nalUnitType == 6)
                 return;
 
-            if (generateFrame && _frameStream.Position == 0)
+            if (generateFrame && hasStartMarker && _frameStream.Position == 0)
             {
                 generateFrame = false;
                 TryGenerateFrame(byteSegment);
