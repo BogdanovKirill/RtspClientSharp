@@ -9,6 +9,7 @@ namespace RtspClientSharp.Rtsp
     internal interface IRtspTransportClient : IDisposable
     {
         EndPoint RemoteEndPoint { get; }
+        EndPoint LocalEndPoint { get; }
 
         Task ConnectAsync(CancellationToken token);
 

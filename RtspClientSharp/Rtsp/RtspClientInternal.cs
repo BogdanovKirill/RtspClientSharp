@@ -31,6 +31,8 @@ namespace RtspClientSharp.Rtsp
 
         private readonly Dictionary<int, ITransportStream> _streamsMap = new Dictionary<int, ITransportStream>();
         private readonly ConcurrentDictionary<int, Socket> _udpClientsMap = new ConcurrentDictionary<int, Socket>();
+        private readonly ConcurrentDictionary<int, int> _udpRtp2RtcpMap = new ConcurrentDictionary<int, int>();
+        private readonly ConcurrentDictionary<Socket, IPEndPoint> _udpJoinedGroupsMap = new ConcurrentDictionary<Socket, IPEndPoint>();
 
         private readonly Dictionary<int, RtcpReceiverReportsProvider> _reportProvidersMap =
             new Dictionary<int, RtcpReceiverReportsProvider>();
@@ -195,12 +197,16 @@ namespace RtspClientSharp.Rtsp
 
                 try
                 {
-                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+                    IPAddress localIpToServer = IPAddress.Any;
+                    if (_rtspTransportClient.LocalEndPoint is IPEndPoint localIpEndPoint)
+                        localIpToServer = localIpEndPoint.Address;
+
+                    IPEndPoint endPoint = new IPEndPoint(localIpToServer, 0);
                     rtpClient.Bind(endPoint);
 
                     int rtpPort = ((IPEndPoint)rtpClient.LocalEndPoint).Port;
 
-                    endPoint = new IPEndPoint(IPAddress.Any, rtpPort + 1);
+                    endPoint = new IPEndPoint(localIpToServer, rtpPort + 1);
 
                     try
                     {
@@ -208,7 +214,7 @@ namespace RtspClientSharp.Rtsp
                     }
                     catch (SocketException e) when (e.SocketErrorCode == SocketError.AddressAlreadyInUse)
                     {
-                        endPoint = new IPEndPoint(IPAddress.Any, 0);
+                        endPoint = new IPEndPoint(localIpToServer, 0);
                         rtcpClient.Bind(endPoint);
                     }
 
@@ -224,6 +230,14 @@ namespace RtspClientSharp.Rtsp
                     rtcpClient.Close();
                     throw;
                 }
+            }
+            else if (_connectionParameters.RtpTransport == RtpTransportProtocol.MULTICAST)
+            {
+                rtpClient = NetworkClientFactory.CreateUdpClient();
+                rtcpClient = NetworkClientFactory.CreateUdpClient();
+
+                setupRequest = _requestMessageFactory.CreateSetupUdpMulticastRequest(track.TrackName);
+                setupResponse = await _rtspTransportClient.EnsureExecuteRequest(setupRequest, token);
             }
             else
             {
@@ -241,9 +255,19 @@ namespace RtspClientSharp.Rtsp
             if (string.IsNullOrEmpty(transportHeader))
                 throw new RtspBadResponseException("Transport header is not found");
 
-            string portsAttributeName = _connectionParameters.RtpTransport == RtpTransportProtocol.UDP
-                ? "server_port"
-                : "interleaved";
+            string portsAttributeName;
+            switch (_connectionParameters.RtpTransport)
+            {
+                case RtpTransportProtocol.UDP:
+                    portsAttributeName = "server_port";
+                    break;
+                case RtpTransportProtocol.MULTICAST:
+                    portsAttributeName = "port";
+                    break;
+                default:
+                    portsAttributeName = "interleaved";
+                    break;
+            }
 
             string[] transportAttributes = transportHeader.Split(TransportAttributesSeparator, StringSplitOptions.RemoveEmptyEntries);
 
@@ -276,6 +300,73 @@ namespace RtspClientSharp.Rtsp
 
                 _udpClientsMap[rtpChannelNumber] = rtpClient;
                 _udpClientsMap[rtcpChannelNumber] = rtcpClient;
+                _udpRtp2RtcpMap[rtpChannelNumber] = rtcpChannelNumber;
+            }
+            else if (_connectionParameters.RtpTransport == RtpTransportProtocol.MULTICAST)
+            {
+                int equalSignIndex;
+                string destinationAttribute = transportAttributes.FirstOrDefault(a => a.StartsWith("destination", StringComparison.InvariantCultureIgnoreCase));
+
+                IPAddress destinationAddress;
+
+                if (destinationAttribute != null && (equalSignIndex = destinationAttribute.IndexOf("=", StringComparison.CurrentCultureIgnoreCase)) != -1)
+                    destinationAddress = IPAddress.Parse(destinationAttribute.Substring(++equalSignIndex).Trim());
+                else
+                    throw new RtspBadResponseException("Destination multicast IP is not found");
+
+                string sourceAttribute = transportAttributes.FirstOrDefault(a => a.StartsWith("source", StringComparison.InvariantCultureIgnoreCase));
+
+                IPAddress sourceAddress;
+
+                if (sourceAttribute != null && (equalSignIndex = sourceAttribute.IndexOf("=", StringComparison.CurrentCultureIgnoreCase)) != -1)
+                    sourceAddress = IPAddress.Parse(sourceAttribute.Substring(++equalSignIndex).Trim());
+                else
+                    sourceAddress = ((IPEndPoint)_rtspTransportClient.RemoteEndPoint).Address;
+
+                Debug.Assert(rtpClient != null, nameof(rtpClient) + " != null");
+                Debug.Assert(rtcpClient != null, nameof(rtcpClient) + " != null");
+
+                try
+                {
+                    // if we are conected to several networks, take local IP from already existing TCP connection
+                    IPAddress localIpToServer = IPAddress.Any;
+                    if (_rtspTransportClient.LocalEndPoint is IPEndPoint localIpEndPoint)
+                        localIpToServer = localIpEndPoint.Address;
+
+                    IPEndPoint endPointRtp = new IPEndPoint(localIpToServer, rtpChannelNumber);
+
+                    rtpClient.Bind(endPointRtp);
+                    rtpClient.JoinMulticastSourceGroup(destinationAddress, localIpToServer, sourceAddress);
+                    _udpJoinedGroupsMap[rtpClient] = new IPEndPoint(destinationAddress, rtpChannelNumber);
+
+                    try
+                    {
+                        IPEndPoint endPointRtcp = new IPEndPoint(localIpToServer, rtcpChannelNumber);
+
+                        rtcpClient.Bind(endPointRtcp);
+                        rtcpClient.JoinMulticastSourceGroup(destinationAddress, localIpToServer, sourceAddress);
+                        _udpJoinedGroupsMap[rtcpClient] = new IPEndPoint(destinationAddress, rtcpChannelNumber);
+                    }
+                    catch
+                    {
+                        rtcpClient.Close();
+                        throw;
+                    }
+                }
+                catch
+                {
+                    rtpClient.Close();
+                    throw;
+                }
+
+                var udpHolePunchingPacketSegment = new ArraySegment<byte>(Array.Empty<byte>());
+
+                await rtpClient.SendToAsync(udpHolePunchingPacketSegment, SocketFlags.None, _udpJoinedGroupsMap[rtpClient]);
+                await rtcpClient.SendToAsync(udpHolePunchingPacketSegment, SocketFlags.None, _udpJoinedGroupsMap[rtcpClient]);
+
+                _udpClientsMap[rtpChannelNumber] = rtpClient;
+                _udpClientsMap[rtcpChannelNumber] = rtcpClient;
+                _udpRtp2RtcpMap[rtpChannelNumber] = rtcpChannelNumber;
             }
 
             ParseSessionHeader(setupResponse.Headers[WellKnownHeaders.Session]);
@@ -324,6 +415,11 @@ namespace RtspClientSharp.Rtsp
 
             if (_connectionParameters.RtpTransport == RtpTransportProtocol.TCP)
                 await _rtspTransportClient.SendRequestAsync(teardownRequest, token);
+            else if (_connectionParameters.RtpTransport == RtpTransportProtocol.MULTICAST)
+            {
+                // There is no need to leave multicast group because it is done automatically by OS when socket closes
+                await _rtspTransportClient.EnsureExecuteRequest(teardownRequest, token);
+            }
             else
                 await _rtspTransportClient.EnsureExecuteRequest(teardownRequest, token);
         }
@@ -495,7 +591,7 @@ namespace RtspClientSharp.Rtsp
 
             while (!token.IsCancellationRequested)
             {
-                TpktPayload payload = await _tpktStream.ReadAsync();
+                TpktPayload payload = await _tpktStream.ReadAsync().WithCancellation(token); 
 
                 if (_streamsMap.TryGetValue(payload.Channel, out ITransportStream stream))
                     stream.Process(payload.PayloadSegment);
@@ -510,7 +606,7 @@ namespace RtspClientSharp.Rtsp
 
                 foreach (KeyValuePair<int, RtcpReceiverReportsProvider> pair in _reportProvidersMap)
                 {
-                    IEnumerable<RtcpPacket> packets = pair.Value.GetReportPackets();
+                    IEnumerable<RtcpPacket> packets = pair.Value.GetReportSdesPackets();
                     ArraySegment<byte> byteSegment = SerializeRtcpPackets(packets, bufferStream);
                     int rtcpChannel = pair.Key + 1;
 
@@ -534,8 +630,10 @@ namespace RtspClientSharp.Rtsp
 
                 if (transportStream is RtpStream rtpStream)
                 {
+                    if (!_udpClientsMap.TryGetValue(_udpRtp2RtcpMap[channelNumber], out Socket clientRtcp))
+                        throw new RtspClientException("RTP connection without RTCP");
                     RtcpReceiverReportsProvider receiverReportsProvider = _reportProvidersMap[channelNumber];
-                    receiveTask = ReceiveRtpFromUdpAsync(client, rtpStream, receiverReportsProvider, token);
+                    receiveTask = ReceiveRtpFromUdpAsync(client, clientRtcp, rtpStream, receiverReportsProvider, token);
                 }
                 else
                     receiveTask = ReceiveRtcpFromUdpAsync(client, transportStream, token);
@@ -546,7 +644,7 @@ namespace RtspClientSharp.Rtsp
             return Task.WhenAll(waitList);
         }
 
-        private async Task ReceiveRtpFromUdpAsync(Socket client, RtpStream rtpStream,
+        private async Task ReceiveRtpFromUdpAsync(Socket client, Socket clientRtcp, RtpStream rtpStream,
             RtcpReceiverReportsProvider reportsProvider,
             CancellationToken token)
         {
@@ -557,25 +655,46 @@ namespace RtspClientSharp.Rtsp
             int lastTimeRtcpReportsSent = Environment.TickCount;
             var bufferStream = new MemoryStream();
 
-            while (!token.IsCancellationRequested)
+            IEnumerable<RtcpPacket> packets;
+            ArraySegment<byte> byteSegment;
+
+            try
             {
-                int read = await client.ReceiveAsync(bufferSegment, SocketFlags.None);
+                while (!token.IsCancellationRequested)
+                {
+                    int read = await client.ReceiveAsync(bufferSegment, SocketFlags.None).WithCancellation(token);
 
-                var payloadSegment = new ArraySegment<byte>(readBuffer, 0, read);
-                rtpStream.Process(payloadSegment);
+                    var payloadSegment = new ArraySegment<byte>(readBuffer, 0, read);
+                    rtpStream.Process(payloadSegment);
 
-                int ticksNow = Environment.TickCount;
-                if (!TimeUtils.IsTimeOver(ticksNow, lastTimeRtcpReportsSent, nextRtcpReportInterval))
-                    continue;
+                    int ticksNow = Environment.TickCount;
+                    if (!TimeUtils.IsTimeOver(ticksNow, lastTimeRtcpReportsSent, nextRtcpReportInterval))
+                        continue;
 
-                lastTimeRtcpReportsSent = ticksNow;
-                nextRtcpReportInterval = GetNextRtcpReportIntervalMs();
+                    lastTimeRtcpReportsSent = ticksNow;
+                    nextRtcpReportInterval = GetNextRtcpReportIntervalMs();
 
-                IEnumerable<RtcpPacket> packets = reportsProvider.GetReportPackets();
-                ArraySegment<byte> byteSegment = SerializeRtcpPackets(packets, bufferStream);
+                    packets = reportsProvider.GetReportSdesPackets();
+                    byteSegment = SerializeRtcpPackets(packets, bufferStream);
 
-                await client.SendAsync(byteSegment, SocketFlags.None);
+                    if (_connectionParameters.RtpTransport == RtpTransportProtocol.UDP)
+                        await clientRtcp.SendAsync(byteSegment, SocketFlags.None).WithCancellation(token);
+                    else if (_connectionParameters.RtpTransport == RtpTransportProtocol.MULTICAST)
+                        await clientRtcp.SendToAsync(byteSegment, SocketFlags.None, _udpJoinedGroupsMap[clientRtcp]).WithCancellation(token);
+                }
             }
+            catch (OperationCanceledException)
+            {
+                if (!token.IsCancellationRequested) throw;
+            }
+
+            packets = reportsProvider.GetReportByePackets();
+            byteSegment = SerializeRtcpPackets(packets, bufferStream);
+
+            if (_connectionParameters.RtpTransport == RtpTransportProtocol.UDP)
+                await clientRtcp.SendAsync(byteSegment, SocketFlags.None);
+            else if (_connectionParameters.RtpTransport == RtpTransportProtocol.MULTICAST)
+                await clientRtcp.SendToAsync(byteSegment, SocketFlags.None, _udpJoinedGroupsMap[clientRtcp]);
         }
 
         private static async Task ReceiveRtcpFromUdpAsync(Socket client, ITransportStream stream,
@@ -584,12 +703,19 @@ namespace RtspClientSharp.Rtsp
             var readBuffer = new byte[Constants.UdpReceiveBufferSize];
             var bufferSegment = new ArraySegment<byte>(readBuffer);
 
-            while (!token.IsCancellationRequested)
+            try
             {
-                int read = await client.ReceiveAsync(bufferSegment, SocketFlags.None);
+                while (!token.IsCancellationRequested)
+                {
+                    int read = await client.ReceiveAsync(bufferSegment, SocketFlags.None).WithCancellation(token);
 
-                var payloadSegment = new ArraySegment<byte>(readBuffer, 0, read);
-                stream.Process(payloadSegment);
+                    var payloadSegment = new ArraySegment<byte>(readBuffer, 0, read);
+                    stream.Process(payloadSegment);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                if (!token.IsCancellationRequested) throw;
             }
         }
 

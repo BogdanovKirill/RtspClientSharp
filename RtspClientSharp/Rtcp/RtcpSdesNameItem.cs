@@ -21,7 +21,7 @@ namespace RtspClientSharp.Rtcp
             byte[] domainNameBytes = Encoding.ASCII.GetBytes(DomainName);
 
             stream.WriteByte(1);
-            stream.WriteByte((byte) (domainByteLength + 1));
+            stream.WriteByte((byte) domainByteLength);
             stream.Write(domainNameBytes, 0, domainByteLength);
             stream.WriteByte(0);
         }
