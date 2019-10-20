@@ -19,6 +19,7 @@ namespace RtspClientSharp.UnitTests.Rtsp
             private MemoryStream _responseStream;
 
             public override EndPoint RemoteEndPoint => new IPEndPoint(0, 0);
+            public override EndPoint LocalEndPoint => new IPEndPoint(0, 0);
 
             public RtspTransportClientFake(ConnectionParameters connectionParameters,
                 Func<string, string> responseProvider)
