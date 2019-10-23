@@ -344,8 +344,8 @@ namespace RtspClientSharp.Rtsp
                         IPEndPoint endPointRtcp = new IPEndPoint(localIpToServer, rtcpChannelNumber);
 
                         rtcpClient.Bind(endPointRtcp);
-                        rtcpClient.JoinMulticastSourceGroup(destinationAddress, localIpToServer, sourceAddress);
-                        _udpJoinedGroupsMap[rtcpClient] = new IPEndPoint(destinationAddress, rtcpChannelNumber);
+                        IPAddress whereToReportRtcp = rtcpClient.JoinMulticastSourceGroup(destinationAddress, localIpToServer, sourceAddress);
+                        _udpJoinedGroupsMap[rtcpClient] = new IPEndPoint(whereToReportRtcp, rtcpChannelNumber);
                     }
                     catch
                     {
@@ -361,8 +361,8 @@ namespace RtspClientSharp.Rtsp
 
                 var udpHolePunchingPacketSegment = new ArraySegment<byte>(Array.Empty<byte>());
 
+                // send "punch" packet to multicast group
                 await rtpClient.SendToAsync(udpHolePunchingPacketSegment, SocketFlags.None, _udpJoinedGroupsMap[rtpClient]);
-                await rtcpClient.SendToAsync(udpHolePunchingPacketSegment, SocketFlags.None, _udpJoinedGroupsMap[rtcpClient]);
 
                 _udpClientsMap[rtpChannelNumber] = rtpClient;
                 _udpClientsMap[rtcpChannelNumber] = rtcpClient;

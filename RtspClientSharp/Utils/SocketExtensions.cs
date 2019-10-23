@@ -24,8 +24,17 @@ namespace RtspClientSharp.Utils
                 socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.DropMembership, multicastOption);
         }
 
-        public static void JoinMulticastSourceGroup(this Socket socket, IPAddress multicastGroupIp, IPAddress localIp, IPAddress sourceIp)
+        /// <summary>
+        /// Join Single Source Multicast Group (SSM) with fallback to Any Source Multicast Group scenario (ASM)
+        /// </summary>
+        /// <param name="socket">Socket to join group</param>
+        /// <param name="multicastGroupIp">IP of multicast group</param>
+        /// <param name="localIp">IP of interface able to reach source</param>
+        /// <param name="sourceIp">IP of RTP/RTCP source</param>
+        /// <returns>IP address where to send RTCP Receiver to Sender reports. Multicast group in case of ASM and unicast source IP for SSM.</returns>
+        public static IPAddress JoinMulticastSourceGroup(this Socket socket, IPAddress multicastGroupIp, IPAddress localIp, IPAddress sourceIp)
         {
+            IPAddress rtcpToSource = IPAddress.None;
             // let's try to convert all IPs to type provided by server in "destination" parameter
             if (multicastGroupIp.AddressFamily == AddressFamily.InterNetwork)
             {
@@ -50,11 +59,13 @@ namespace RtspClientSharp.Utils
                     Buffer.BlockCopy(sourceIp.GetAddressBytes(), 0, membershipAddresses, 4, 4);
                     Buffer.BlockCopy(localIp.GetAddressBytes(), 0, membershipAddresses, 8, 4);
                     socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddSourceMembership, membershipAddresses);
+                    rtcpToSource = sourceIp;
                 }
                 else
                 {
                     // if we don't have good source IP, join group without source
                     JoinMulticastGroup(socket, multicastGroupIp, localIp);
+                    rtcpToSource = multicastGroupIp;
                 }
             }
             else if (multicastGroupIp.AddressFamily == AddressFamily.InterNetworkV6)
@@ -74,13 +85,16 @@ namespace RtspClientSharp.Utils
                     Buffer.BlockCopy(sourceIp.GetAddressBytes(), 0, membershipAddresses, 16, 16);
                     Buffer.BlockCopy(localIp.GetAddressBytes(), 0, membershipAddresses, 32, 16);
                     socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddSourceMembership, membershipAddresses);
+                    rtcpToSource = sourceIp;
                 }
                 else
                 {
                     // if we don't have good source IP, join group without source
                     JoinMulticastGroup(socket, multicastGroupIp, localIp);
+                    rtcpToSource = multicastGroupIp;
                 }
             }
+            return rtcpToSource;
         }
     }
 }
