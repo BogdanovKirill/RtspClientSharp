@@ -18,6 +18,9 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
         private readonly Dictionary<TransformParameters, FFmpegDecodedVideoScaler> _scalersMap =
             new Dictionary<TransformParameters, FFmpegDecodedVideoScaler>();
 
+        // Lock object to ensure this object remains disposed (or not) for the duration of a action
+        private readonly object disposalLock = new object();
+
         private byte[] _extraData = new byte[0];
         private bool _disposed;
 
@@ -72,18 +75,25 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                     }
                 }
 
-                resultCode = FFmpegVideoPInvoke.DecodeFrame(_decoderHandle, (IntPtr)rawBufferPtr,
+                lock (disposalLock) {
+                    if (_disposed) {
+                        Console.WriteLine("Skipped decoding frame, as decoder was disposed. (Therefore the frame probably wasn't wanted)");
+                        return null;
+                        //Console.WriteLine("I am disposed, so you probably don't want to do this! But I'll let you do it for now. (decoding frame)");
+                    }
+
+                    resultCode = FFmpegVideoPInvoke.DecodeFrame(_decoderHandle, (IntPtr)rawBufferPtr,
                     rawVideoFrame.FrameSegment.Count,
                     out int width, out int height, out FFmpegPixelFormat pixelFormat);
 
-                if (resultCode != 0)
-                    return null;
+                    if (resultCode != 0)
+                        return null;
 
-                if (_currentFrameParameters.Width != width || _currentFrameParameters.Height != height ||
-                    _currentFrameParameters.PixelFormat != pixelFormat)
-                {
-                    _currentFrameParameters = new DecodedVideoFrameParameters(width, height, pixelFormat);
-                    DropAllVideoScalers();
+                    if (_currentFrameParameters.Width != width || _currentFrameParameters.Height != height ||
+                        _currentFrameParameters.PixelFormat != pixelFormat) {
+                        _currentFrameParameters = new DecodedVideoFrameParameters(width, height, pixelFormat);
+                        DropAllVideoScalers();
+                    }
                 }
 
                 return new DecodedVideoFrame(TransformTo);
@@ -92,13 +102,21 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
         public void Dispose()
         {
-            if (_disposed)
-                return;
+            lock (disposalLock) {
+                if (_disposed)
+                    return;
 
-            _disposed = true;
-            FFmpegVideoPInvoke.RemoveVideoDecoder(_decoderHandle);
-            DropAllVideoScalers();
-            GC.SuppressFinalize(this);
+                // debug..
+                string decoderAddressString = _decoderHandle.ToString();
+                Console.WriteLine("Disposing FFmpegVideoDecoder with handle: {0}.", decoderAddressString);
+
+                _disposed = true;
+                FFmpegVideoPInvoke.RemoveVideoDecoder(_decoderHandle);
+                DropAllVideoScalers();
+                GC.SuppressFinalize(this);
+
+                Console.WriteLine("Disposed FFmpegVideoDecoder with handle: {0}.", decoderAddressString);
+            }
         }
 
         private void DropAllVideoScalers()
@@ -117,10 +135,18 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                 _scalersMap.Add(parameters, videoScaler);
             }
 
-            int resultCode = FFmpegVideoPInvoke.ScaleDecodedVideoFrame(_decoderHandle, videoScaler.Handle, buffer, bufferStride);
+            lock (disposalLock) {
+                if (_disposed) {
+                    Console.WriteLine("Skipped scaling frame, as decoder was disposed. (Therefore the frame probably wasn't wanted)");
+                    return;
+                    //Console.WriteLine("I am disposed, so you probably don't want to do this! But I'll let you do it for now. (scaling frame)");
+                }
 
-            if (resultCode != 0)
-                throw new DecoderException($"An error occurred while converting decoding video frame, {_videoCodecId} codec, code: {resultCode}");
+                int resultCode = FFmpegVideoPInvoke.ScaleDecodedVideoFrame(_decoderHandle, videoScaler.Handle, buffer, bufferStride);
+
+                if (resultCode != 0)
+                    throw new DecoderException($"An error occurred while converting decoding video frame, {_videoCodecId} codec, code: {resultCode}");
+            }
         }
     }
 }
