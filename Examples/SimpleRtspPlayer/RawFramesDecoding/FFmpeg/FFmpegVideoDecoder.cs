@@ -79,7 +79,6 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                     if (_disposed) {
                         Console.WriteLine("Skipped decoding frame, as decoder was disposed. (Therefore the frame probably wasn't wanted)");
                         return null;
-                        //Console.WriteLine("I am disposed, so you probably don't want to do this! But I'll let you do it for now. (decoding frame)");
                     }
 
                     resultCode = FFmpegVideoPInvoke.DecodeFrame(_decoderHandle, (IntPtr)rawBufferPtr,
@@ -106,16 +105,10 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                 if (_disposed)
                     return;
 
-                // debug..
-                string decoderAddressString = _decoderHandle.ToString();
-                Console.WriteLine("Disposing FFmpegVideoDecoder with handle: {0}.", decoderAddressString);
-
                 _disposed = true;
                 FFmpegVideoPInvoke.RemoveVideoDecoder(_decoderHandle);
                 DropAllVideoScalers();
                 GC.SuppressFinalize(this);
-
-                Console.WriteLine("Disposed FFmpegVideoDecoder with handle: {0}.", decoderAddressString);
             }
         }
 
@@ -139,7 +132,6 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                 if (_disposed) {
                     Console.WriteLine("Skipped scaling frame, as decoder was disposed. (Therefore the frame probably wasn't wanted)");
                     return;
-                    //Console.WriteLine("I am disposed, so you probably don't want to do this! But I'll let you do it for now. (scaling frame)");
                 }
 
                 int resultCode = FFmpegVideoPInvoke.ScaleDecodedVideoFrame(_decoderHandle, videoScaler.Handle, buffer, bufferStride);
