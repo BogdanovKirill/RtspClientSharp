@@ -77,7 +77,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
                 lock (disposalLock) {
                     if (_disposed) {
-                        Console.WriteLine("Skipped decoding frame, as decoder was disposed. (Therefore the frame probably wasn't wanted)");
+                        Console.WriteLine("Skipped decoding video frame, as decoder was disposed. (Therefore the frame probably wasn't wanted)");
                         return null;
                     }
 
@@ -130,7 +130,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
             lock (disposalLock) {
                 if (_disposed) {
-                    Console.WriteLine("Skipped scaling frame, as decoder was disposed. (Therefore the frame probably wasn't wanted)");
+                    Console.WriteLine("Skipped scaling video frame, as decoder was disposed. (Therefore the frame probably wasn't wanted)");
                     return;
                 }
 
