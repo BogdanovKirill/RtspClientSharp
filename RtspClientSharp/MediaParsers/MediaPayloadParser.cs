@@ -1,6 +1,7 @@
 ﻿using System;
 using RtspClientSharp.Codecs;
 using RtspClientSharp.Codecs.Audio;
+using RtspClientSharp.Codecs.Data;
 using RtspClientSharp.Codecs.Video;
 using RtspClientSharp.RawFrames;
 
@@ -48,6 +49,8 @@ namespace RtspClientSharp.MediaParsers
                     return new G726AudioPayloadParser(g726CodecInfo);
                 case PCMCodecInfo pcmCodecInfo:
                     return new PCMAudioPayloadParser(pcmCodecInfo);
+                case OnvifMetadataCodecInfo onvifMetadataCodecInfo:
+                    return new OnvifMetadataPayloadParser(onvifMetadataCodecInfo);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(codecInfo),
                         $"Unsupported codec: {codecInfo.GetType().Name}");

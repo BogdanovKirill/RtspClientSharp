@@ -3,6 +3,7 @@
     public enum FrameType
     {
         Video,
-        Audio
+        Audio,
+        Data
     }
 }
