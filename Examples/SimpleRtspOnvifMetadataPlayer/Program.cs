@@ -21,6 +21,8 @@ namespace SimpleRtspOnvifMetadataPlayer
             //var serverUri = new Uri("rtsp://admin:prysm-123@192.168.50.6:558/LiveChannel/1/media.smp/session=1228432");
             //var serverUri = new Uri("rtsp://service:Ccrlyon69!@192.168.40.25/rtsp_tunnel?p=0&h26x=4&vcd=2");
             var serverUri = new Uri("rtsp://service:Ccrlyon69!@192.168.40.23/rtsp_tunnel?p=0&h26x=4&vcd=2");
+            //var serverUri = new Uri("rtsp://root:pass@192.168.40.3/onvif-media/media.amp?profile=profile3&sessiontimeout=60&streamtype=unicast");
+            //var serverUri = new Uri("rtsp://root:pass@192.168.40.9/onvif-media/media.amp?profile=profile6&sessiontimeout=60&streamtype=unicast");
 
             var connectionParameters = new ConnectionParameters(serverUri)
             {
@@ -35,6 +37,7 @@ namespace SimpleRtspOnvifMetadataPlayer
                 {
                     if (frame is OnvifMetadataFrame onvifFrame)
                     {
+                        System.Diagnostics.Debug.WriteLine(onvifFrame.XmlSegment);
                         Console.WriteLine(onvifFrame.XmlSegment);
                         Console.WriteLine();
                     }

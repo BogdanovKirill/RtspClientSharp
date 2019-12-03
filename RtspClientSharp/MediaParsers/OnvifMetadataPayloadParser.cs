@@ -2,9 +2,13 @@
 using RtspClientSharp.RawFrames.Data;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace RtspClientSharp.MediaParsers
 {
@@ -23,6 +27,12 @@ namespace RtspClientSharp.MediaParsers
         {
             var xml = Encoding.Default.GetString(byteSegment.Array, byteSegment.Offset, byteSegment.Count);
 
+            if (xml.StartsWith("<?xml"))
+            {
+                int ind = xml.IndexOf("?>");
+                xml = xml.Remove(0, ind + 2);
+            }
+
             if (_tagSeparator == null)
             {
                 var rg = Regex.Match(xml, "<(.*?)>");
@@ -40,20 +50,15 @@ namespace RtspClientSharp.MediaParsers
 
                 if (endIndex != -1)
                 {
-                    var end = endIndex + endTag.Length == xml.Length ?
-                                xml :
-                                xml.Remove(endIndex + endTag.Length);
-
-                    _tag += end;
+                    string endOfNode = xml.Substring(0, endIndex + endTag.Length);
+                
+                    _tag += endOfNode;
+                    _tag = _tag.Trim('\n', '\r');
 
                     OnFrameGenerated(new OnvifMetadataFrame(DateTime.Now, _tag));
+                    _tag = "";
 
-                    _tag = endIndex + endTag.Length == xml.Length ?
-                            "" :
-                            xml.Substring(endIndex + endTag.Length);
-
-                    if (_tag == "")
-                        break;
+                    xml = xml.Replace(endOfNode, "");
                 }
                 else
                 {
