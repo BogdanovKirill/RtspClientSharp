@@ -26,43 +26,42 @@ namespace RtspClientSharp.MediaParsers
         public override void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit)
         {
             var xml = Encoding.Default.GetString(byteSegment.Array, byteSegment.Offset, byteSegment.Count);
+            _tag += xml;
 
-            if (xml.StartsWith("<?xml"))
+            if (_tag.StartsWith("<?xml"))
             {
-                int ind = xml.IndexOf("?>");
-                xml = xml.Remove(0, ind + 2);
+                int ind = _tag.IndexOf("?>");
+                if (ind != -1)
+                    _tag = _tag.Remove(0, ind + 2);
+                else
+                    return;
             }
 
             if (_tagSeparator == null)
             {
-                var rg = Regex.Match(xml, "<(.*?)>");
+                var rg = Regex.Match(_tag, "<(.*?)>");
                 if (rg.Success && rg.Groups.Count > 1)
                 {
-                    _tagSeparator = rg.Groups[1].Value.Split(' ').FirstOrDefault();
-                }
-            }
-
-            var endTag = $"</{_tagSeparator}>";
-
-            do
-            {
-                var endIndex = xml.IndexOf(endTag);
-
-                if (endIndex != -1)
-                {
-                    string endOfNode = xml.Substring(0, endIndex + endTag.Length);
-                
-                    _tag += endOfNode;
-                    _tag = _tag.Trim('\n', '\r');
-
-                    OnFrameGenerated(new OnvifMetadataFrame(DateTime.Now, _tag));
-                    _tag = "";
-
-                    xml = xml.Replace(endOfNode, "");
+                    _tagSeparator = $"</{rg.Groups[1].Value.Split(' ').FirstOrDefault()}>";
                 }
                 else
                 {
-                    _tag += xml;
+                    return;
+                }
+            }
+
+            do
+            {
+                var endIndex = _tag.IndexOf(_tagSeparator);
+
+                if (endIndex != -1)
+                {
+                    string xmlFrame = _tag.Substring(0, endIndex + _tagSeparator.Length);
+                    _tag = _tag.Remove(0, xmlFrame.Length);
+                    OnFrameGenerated(new OnvifMetadataFrame(DateTime.Now, xmlFrame.Trim('\n', '\r')));
+                }
+                else
+                {
                     break;
                 }
             }
