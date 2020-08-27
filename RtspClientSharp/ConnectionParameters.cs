@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using RtspClientSharp.Rtsp;
+using RtspClientSharp.Utils;
 
 namespace RtspClientSharp
 {
@@ -26,7 +27,26 @@ namespace RtspClientSharp
         public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(10);
         public TimeSpan CancelTimeout { get; set; } = TimeSpan.FromSeconds(5);
         public string UserAgent { get; set; } = DefaultUserAgent;
-        public RtpTransportProtocol RtpTransport { get; set; } = RtpTransportProtocol.TCP;
+
+
+        private RtpTransportProtocol _rtpTransport;
+        public RtpTransportProtocol RtpTransport {
+            get => _rtpTransport;
+            set
+            {
+                _rtpTransport = value;
+                if(SocketFactory != null) { return; }
+                if(_rtpTransport == RtpTransportProtocol.TCP)
+                {
+                    SocketFactory = new DefaultTcpSocketFactory();
+                }else if(_rtpTransport == RtpTransportProtocol.UDP)
+                {
+                    SocketFactory = new DefaultUdpSocketFactory();
+                }
+            }
+        }
+
+        public ISocketFactory SocketFactory { get; set; } = new DefaultTcpSocketFactory();
 
         public ConnectionParameters(Uri connectionUri)
         {
@@ -34,6 +54,7 @@ namespace RtspClientSharp
 
             ConnectionUri = connectionUri;
             Credentials = GetNetworkCredentialsFromUri(connectionUri);
+            RtpTransport = RtpTransportProtocol.TCP;
         }
 
         public ConnectionParameters(Uri connectionUri, NetworkCredential credentials)
@@ -42,6 +63,7 @@ namespace RtspClientSharp
 
             ConnectionUri = connectionUri;
             Credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+            RtpTransport = RtpTransportProtocol.TCP;
         }
 
         internal Uri GetFixedRtspUri()

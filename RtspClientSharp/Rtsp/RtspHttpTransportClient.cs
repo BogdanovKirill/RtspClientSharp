@@ -26,9 +26,12 @@ namespace RtspClientSharp.Rtsp
 
         public override EndPoint RemoteEndPoint => _remoteEndPoint;
 
+        public readonly ISocketFactory _tcpSocketFactory;
+
         public RtspHttpTransportClient(ConnectionParameters connectionParameters)
             : base(connectionParameters)
         {
+            _tcpSocketFactory = connectionParameters.SocketFactory;
         }
 
         public override async Task ConnectAsync(CancellationToken token)
@@ -36,7 +39,7 @@ namespace RtspClientSharp.Rtsp
             _commandCounter = 0;
             _sessionCookie = Guid.NewGuid().ToString("N").Substring(0, 10);
 
-            _streamDataClient = NetworkClientFactory.CreateTcpClient();
+            _streamDataClient = _tcpSocketFactory.CreateSocket();
 
             Uri connectionUri = ConnectionParameters.ConnectionUri;
 
@@ -114,7 +117,7 @@ namespace RtspClientSharp.Rtsp
 
         protected override async Task WriteAsync(byte[] buffer, int offset, int count)
         {
-            using (_commandsClient = NetworkClientFactory.CreateTcpClient())
+            using (_commandsClient = _tcpSocketFactory.CreateSocket())
             {
                 Uri connectionUri = ConnectionParameters.ConnectionUri;
 

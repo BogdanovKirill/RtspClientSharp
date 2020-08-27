@@ -1,26 +1,16 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Collections.Generic;
+using System.Net.Sockets;
+using System.Text;
 
 namespace RtspClientSharp.Utils
 {
-    static class NetworkClientFactory
+    public class DefaultUdpSocketFactory : ISocketFactory
     {
-        private const int TcpReceiveBufferDefaultSize = 64 * 1024;
         private const int UdpReceiveBufferDefaultSize = 128 * 1024;
         private const int SIO_UDP_CONNRESET = -1744830452;
         private static readonly byte[] EmptyOptionInValue = { 0, 0, 0, 0 };
-
-        public static Socket CreateTcpClient()
-        {
-            var socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp)
-            {
-                ReceiveBufferSize = TcpReceiveBufferDefaultSize,
-                DualMode = true,
-                NoDelay = true
-            };
-            return socket;
-        }
-
-        public static Socket CreateUdpClient()
+        public Socket CreateSocket()
         {
             var socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp)
             {
