@@ -38,7 +38,6 @@ namespace RtspClientSharp
 
             ConnectionUri = connectionUri;
             Credentials = GetNetworkCredentialsFromUri(connectionUri);
-            RtpTransport = RtpTransportProtocol.TCP;
         }
 
         public ConnectionParameters(Uri connectionUri, NetworkCredential credentials)
@@ -47,7 +46,6 @@ namespace RtspClientSharp
 
             ConnectionUri = connectionUri;
             Credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
-            RtpTransport = RtpTransportProtocol.TCP;
         }
 
         internal Uri GetFixedRtspUri()
