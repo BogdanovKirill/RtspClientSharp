@@ -28,25 +28,9 @@ namespace RtspClientSharp
         public TimeSpan CancelTimeout { get; set; } = TimeSpan.FromSeconds(5);
         public string UserAgent { get; set; } = DefaultUserAgent;
 
+        public RtpTransportProtocol RtpTransport { get; set; } = RtpTransportProtocol.TCP;
 
-        private RtpTransportProtocol _rtpTransport;
-        public RtpTransportProtocol RtpTransport {
-            get => _rtpTransport;
-            set
-            {
-                _rtpTransport = value;
-                if(SocketFactory != null) { return; }
-                if(_rtpTransport == RtpTransportProtocol.TCP)
-                {
-                    SocketFactory = DefaultTcpSocketFactory.Instance;
-                }else if(_rtpTransport == RtpTransportProtocol.UDP)
-                {
-                    SocketFactory = DefaultUdpSocketFactory.Instance;
-                }
-            }
-        }
-
-        public ISocketFactory SocketFactory { get; set; } = DefaultTcpSocketFactory.Instance;
+        public ISocketFactory SocketFactory { get; set; } = DefaultSocketFactory.Instance;
 
         public ConnectionParameters(Uri connectionUri)
         {

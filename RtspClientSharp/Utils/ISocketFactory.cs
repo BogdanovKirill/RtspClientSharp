@@ -7,6 +7,7 @@ namespace RtspClientSharp.Utils
 {
     public interface ISocketFactory
     {
-        Socket CreateSocket();
+        Socket CreateTcpSocket();
+        Socket CreateUdpSocket();
     }
 }

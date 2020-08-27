@@ -28,7 +28,7 @@ namespace RtspClientSharp.Rtsp
 
         public override async Task ConnectAsync(CancellationToken token)
         {
-            _tcpClient = _tcpSocketFactory.CreateSocket();
+            _tcpClient = _tcpSocketFactory.CreateTcpSocket();
 
             Uri connectionUri = ConnectionParameters.ConnectionUri;
 

@@ -39,7 +39,7 @@ namespace RtspClientSharp.Rtsp
             _commandCounter = 0;
             _sessionCookie = Guid.NewGuid().ToString("N").Substring(0, 10);
 
-            _streamDataClient = _tcpSocketFactory.CreateSocket();
+            _streamDataClient = _tcpSocketFactory.CreateTcpSocket();
 
             Uri connectionUri = ConnectionParameters.ConnectionUri;
 
@@ -117,7 +117,7 @@ namespace RtspClientSharp.Rtsp
 
         protected override async Task WriteAsync(byte[] buffer, int offset, int count)
         {
-            using (_commandsClient = _tcpSocketFactory.CreateSocket())
+            using (_commandsClient = _tcpSocketFactory.CreateTcpSocket())
             {
                 Uri connectionUri = ConnectionParameters.ConnectionUri;
 
