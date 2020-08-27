@@ -7,6 +7,12 @@ namespace RtspClientSharp.Utils
 {
     public class DefaultUdpSocketFactory : ISocketFactory
     {
+        private static ISocketFactory _instance;
+        public static ISocketFactory Instance => _instance = (_instance ?? new DefaultUdpSocketFactory());
+        private DefaultUdpSocketFactory()
+        {
+        }
+
         private const int UdpReceiveBufferDefaultSize = 128 * 1024;
         private const int SIO_UDP_CONNRESET = -1744830452;
         private static readonly byte[] EmptyOptionInValue = { 0, 0, 0, 0 };

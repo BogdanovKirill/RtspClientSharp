@@ -38,15 +38,15 @@ namespace RtspClientSharp
                 if(SocketFactory != null) { return; }
                 if(_rtpTransport == RtpTransportProtocol.TCP)
                 {
-                    SocketFactory = new DefaultTcpSocketFactory();
+                    SocketFactory = DefaultTcpSocketFactory.Instance;
                 }else if(_rtpTransport == RtpTransportProtocol.UDP)
                 {
-                    SocketFactory = new DefaultUdpSocketFactory();
+                    SocketFactory = DefaultUdpSocketFactory.Instance;
                 }
             }
         }
 
-        public ISocketFactory SocketFactory { get; set; } = new DefaultTcpSocketFactory();
+        public ISocketFactory SocketFactory { get; set; } = DefaultTcpSocketFactory.Instance;
 
         public ConnectionParameters(Uri connectionUri)
         {
