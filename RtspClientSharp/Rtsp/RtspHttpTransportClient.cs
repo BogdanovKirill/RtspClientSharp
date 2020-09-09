@@ -15,8 +15,8 @@ namespace RtspClientSharp.Rtsp
 {
     class RtspHttpTransportClient : RtspTransportClient
     {
-        private Socket _streamDataClient;
-        private Socket _commandsClient;
+        private IRtspSocket _streamDataClient;
+        private IRtspSocket _commandsClient;
         private string _sessionCookie;
         private Authenticator _authenticator;
         private Stream _dataNetworkStream;
@@ -48,7 +48,7 @@ namespace RtspClientSharp.Rtsp
             await _streamDataClient.ConnectAsync(connectionUri.Host, httpPort);
 
             _remoteEndPoint = _streamDataClient.RemoteEndPoint;
-            _dataNetworkStream = new NetworkStream(_streamDataClient, false);
+            _dataNetworkStream = _streamDataClient.CreateNetworkStream();
 
             string request = ComposeGetRequest();
             byte[] requestBytes = Encoding.ASCII.GetBytes(request);

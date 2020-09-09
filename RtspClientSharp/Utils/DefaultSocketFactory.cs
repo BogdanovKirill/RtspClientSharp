@@ -16,7 +16,7 @@ namespace RtspClientSharp.Utils
         private const int UdpReceiveBufferDefaultSize = 128 * 1024;
         private const int SIO_UDP_CONNRESET = -1744830452;
         private static readonly byte[] EmptyOptionInValue = { 0, 0, 0, 0 };
-        public Socket CreateUdpSocket()
+        public IRtspSocket CreateUdpSocket()
         {
             var socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp)
             {
@@ -24,18 +24,18 @@ namespace RtspClientSharp.Utils
                 DualMode = true
             };
             socket.IOControl((IOControlCode)SIO_UDP_CONNRESET, EmptyOptionInValue, null);
-            return socket;
+            return new RtspSocketWrapper(socket);
         }
 
         private const int TcpReceiveBufferDefaultSize = 64 * 1024;
-        public Socket CreateTcpSocket()
+        public IRtspSocket CreateTcpSocket()
         {
-            return new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp)
+            return new RtspSocketWrapper(new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp)
             {
                 ReceiveBufferSize = TcpReceiveBufferDefaultSize,
                 DualMode = true,
                 NoDelay = true
-            };
+            });
         }
     }
 }

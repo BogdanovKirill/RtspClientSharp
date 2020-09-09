@@ -11,7 +11,7 @@ namespace RtspClientSharp.Rtsp
 {
     class RtspTcpTransportClient : RtspTransportClient
     {
-        private Socket _tcpClient;
+        private IRtspSocket _tcpClient;
         private Stream _networkStream;
         private EndPoint _remoteEndPoint = new IPEndPoint(IPAddress.None, 0);
         private int _disposed;
@@ -37,7 +37,7 @@ namespace RtspClientSharp.Rtsp
             await _tcpClient.ConnectAsync(connectionUri.Host, rtspPort);
 
             _remoteEndPoint = _tcpClient.RemoteEndPoint;
-            _networkStream = new NetworkStream(_tcpClient, false);
+            _networkStream = _tcpClient.CreateNetworkStream();
         }
 
         public override Stream GetStream()
