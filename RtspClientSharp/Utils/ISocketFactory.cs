@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -25,7 +26,7 @@ namespace RtspClientSharp.Utils
         Task<int> ReceiveAsync(ArraySegment<byte> data, SocketFlags socketFlags);
         void Bind(EndPoint endPoint);
         EndPoint LocalEndPoint { get; }
-        NetworkStream CreateNetworkStream();
+        Stream CreateNetworkStream();
     }
 
     public class RtspSocketWrapper : IRtspSocket
@@ -62,7 +63,7 @@ namespace RtspClientSharp.Utils
             return _socket.ConnectAsync(host, port);
         }
 
-        public NetworkStream CreateNetworkStream()
+        public Stream CreateNetworkStream()
         {
             return new NetworkStream(_socket, false);
         }
