@@ -14,6 +14,7 @@ steps:
 - template: build_tools_setup.yml
 
 - task: SonarCloudPrepare@1
+  enabled: false
   inputs:
     SonarCloud: 'IDS3'
     organization: 'idselectronics'
@@ -72,6 +73,7 @@ steps:
     codeCoverageEnabled: True
     
 - task: SonarCloudAnalyze@1
+  enabled: false
 
 - task: CopyFiles@2
   displayName: 'Copy Files to: $(build.artifactstagingdirectory) '
