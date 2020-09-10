@@ -50,7 +50,7 @@ steps:
     msbuildArchitecture: 'x64'
     configuration: '$(BuildConfiguration)'
     msbuildArguments: '/t:build;pack /p:PackageVersion=$(buildversion)-beta /p:PackageOutputPath=$(build.artifactstagingdirectory)/public /p:AssemblyFileVersion=$(buildversion)'
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/build-pipeline'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/chore/build-pipeline'))
 
 - task: MSBuild@1
   displayName: 'NuGet build Pull Request'
