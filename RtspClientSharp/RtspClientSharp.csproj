@@ -27,9 +27,11 @@ More info: https://github.com/BogdanovKirill/RtspClientSharp/issues/49</PackageR
     <AssemblyOriginatorKeyFile>signkey.pfx</AssemblyOriginatorKeyFile>
     <PackageId>RtspClientSharp</PackageId>
     <PackageVersion>1.3.4</PackageVersion>
+    <PackOnBuild>true</PackOnBuild>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType></DebugType>
     <DocumentationFile>bin\Release\netstandard2.0\RtspClientSharp.xml</DocumentationFile>
   </PropertyGroup>
   
@@ -54,11 +56,4 @@ More info: https://github.com/BogdanovKirill/RtspClientSharp/issues/49</PackageR
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Publish|x64'">
     <DocumentationFile>bin\Release\netstandard2.0\RtspClientSharp.xml</DocumentationFile>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="NuGet.Build.Packaging" Version="0.2.2">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
 </Project>
