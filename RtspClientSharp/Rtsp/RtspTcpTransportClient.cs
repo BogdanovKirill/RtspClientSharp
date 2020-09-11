@@ -11,21 +11,24 @@ namespace RtspClientSharp.Rtsp
 {
     class RtspTcpTransportClient : RtspTransportClient
     {
-        private Socket _tcpClient;
+        private IRtspSocket _tcpClient;
         private Stream _networkStream;
         private EndPoint _remoteEndPoint = new IPEndPoint(IPAddress.None, 0);
         private int _disposed;
 
         public override EndPoint RemoteEndPoint => _remoteEndPoint;
 
+        public readonly ISocketFactory _tcpSocketFactory;
+
         public RtspTcpTransportClient(ConnectionParameters connectionParameters)
             : base(connectionParameters)
         {
+            _tcpSocketFactory = connectionParameters.SocketFactory;
         }
 
         public override async Task ConnectAsync(CancellationToken token)
         {
-            _tcpClient = NetworkClientFactory.CreateTcpClient();
+            _tcpClient = _tcpSocketFactory.CreateTcpSocket();
 
             Uri connectionUri = ConnectionParameters.ConnectionUri;
 
@@ -34,7 +37,7 @@ namespace RtspClientSharp.Rtsp
             await _tcpClient.ConnectAsync(connectionUri.Host, rtspPort);
 
             _remoteEndPoint = _tcpClient.RemoteEndPoint;
-            _networkStream = new NetworkStream(_tcpClient, false);
+            _networkStream = _tcpClient.CreateNetworkStream();
         }
 
         public override Stream GetStream()

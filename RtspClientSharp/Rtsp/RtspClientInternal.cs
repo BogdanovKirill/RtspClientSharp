@@ -30,7 +30,7 @@ namespace RtspClientSharp.Rtsp
         private readonly RtspRequestMessageFactory _requestMessageFactory;
 
         private readonly Dictionary<int, ITransportStream> _streamsMap = new Dictionary<int, ITransportStream>();
-        private readonly ConcurrentDictionary<int, Socket> _udpClientsMap = new ConcurrentDictionary<int, Socket>();
+        private readonly ConcurrentDictionary<int, IRtspSocket> _udpClientsMap = new ConcurrentDictionary<int, IRtspSocket>();
 
         private readonly Dictionary<int, RtcpReceiverReportsProvider> _reportProvidersMap =
             new Dictionary<int, RtcpReceiverReportsProvider>();
@@ -185,13 +185,13 @@ namespace RtspClientSharp.Rtsp
 
             int rtpChannelNumber;
             int rtcpChannelNumber;
-            Socket rtpClient = null;
-            Socket rtcpClient = null;
+            IRtspSocket rtpClient = null;
+            IRtspSocket rtcpClient = null;
 
             if (_connectionParameters.RtpTransport == RtpTransportProtocol.UDP)
             {
-                rtpClient = NetworkClientFactory.CreateUdpClient();
-                rtcpClient = NetworkClientFactory.CreateUdpClient();
+                rtpClient = _connectionParameters.SocketFactory.CreateUdpSocket();
+                rtcpClient = _connectionParameters.SocketFactory.CreateUdpSocket();
 
                 try
                 {
@@ -523,10 +523,10 @@ namespace RtspClientSharp.Rtsp
         {
             var waitList = new List<Task>(_udpClientsMap.Count / 2);
 
-            foreach (KeyValuePair<int, Socket> pair in _udpClientsMap)
+            foreach (KeyValuePair<int, IRtspSocket> pair in _udpClientsMap)
             {
                 int channelNumber = pair.Key;
-                Socket client = pair.Value;
+                IRtspSocket client = pair.Value;
 
                 ITransportStream transportStream = _streamsMap[channelNumber];
 
@@ -546,7 +546,7 @@ namespace RtspClientSharp.Rtsp
             return Task.WhenAll(waitList);
         }
 
-        private async Task ReceiveRtpFromUdpAsync(Socket client, RtpStream rtpStream,
+        private async Task ReceiveRtpFromUdpAsync(IRtspSocket client, RtpStream rtpStream,
             RtcpReceiverReportsProvider reportsProvider,
             CancellationToken token)
         {
@@ -578,7 +578,7 @@ namespace RtspClientSharp.Rtsp
             }
         }
 
-        private static async Task ReceiveRtcpFromUdpAsync(Socket client, ITransportStream stream,
+        private static async Task ReceiveRtcpFromUdpAsync(IRtspSocket client, ITransportStream stream,
             CancellationToken token)
         {
             var readBuffer = new byte[Constants.UdpReceiveBufferSize];

@@ -86,7 +86,7 @@ namespace RtspClientSharp
                 }
                 catch (Exception e)
                 {
-                    _rtspClientInternal.Dispose();
+                    _rtspClientInternal?.Dispose();
                     Volatile.Write(ref _rtspClientInternal, null);
 
                     if (e is TimeoutException)
