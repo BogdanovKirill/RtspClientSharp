@@ -8,7 +8,7 @@ namespace RtspClientSharp.MediaParsers
 {
     abstract class MediaPayloadParser : IMediaPayloadParser
     {
-        private DateTime _baseTime = DateTime.MinValue;
+        public DateTime BaseTime { get; set; }
 
         public Action<RawFrame> FrameGenerated { get; set; }
 
@@ -21,10 +21,10 @@ namespace RtspClientSharp.MediaParsers
             if (timeOffset == TimeSpan.MinValue)
                 return DateTime.UtcNow;
 
-            if (_baseTime == DateTime.MinValue)
-                _baseTime = DateTime.UtcNow;
+            if (BaseTime == default(DateTime))
+                BaseTime = DateTime.UtcNow;
 
-            return _baseTime + timeOffset;
+            return BaseTime + timeOffset;
         }
 
         protected virtual void OnFrameGenerated(RawFrame e)

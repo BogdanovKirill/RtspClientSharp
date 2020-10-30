@@ -64,6 +64,19 @@ namespace RtspClientSharp.Rtsp
             return rtspRequestMessage;
         }
 
+        public RtspRequestMessage CreatePlayRequest(DateTime initialTimestamp)
+        {
+            Uri uri = GetContentBasedUri();
+
+            var rtspRequestMessage =
+                new RtspRequestMessage(RtspMethod.PLAY, uri, ProtocolVersion, NextCSeqProvider, _userAgent, SessionId);
+            if (initialTimestamp.Kind == DateTimeKind.Utc)
+                rtspRequestMessage.Headers.Add("Range", $"clock={initialTimestamp.ToString("yyyyMMddThhmmssZ")}-");
+            else
+                rtspRequestMessage.Headers.Add("Range", $"clock={DateTime.SpecifyKind(initialTimestamp, DateTimeKind.Utc).ToString("yyyyMMddThhmmssZ")}-");
+            return rtspRequestMessage;
+        }
+
         public RtspRequestMessage CreateTeardownRequest()
         {
             var rtspRequestMessage = new RtspRequestMessage(RtspMethod.TEARDOWN, _rtspUri, ProtocolVersion, 

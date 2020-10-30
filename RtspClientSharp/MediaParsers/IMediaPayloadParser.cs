@@ -5,6 +5,8 @@ namespace RtspClientSharp.MediaParsers
 {
     interface IMediaPayloadParser
     {
+        DateTime BaseTime { get; set; }
+
         Action<RawFrame> FrameGenerated { get; set; }
 
         void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit);
