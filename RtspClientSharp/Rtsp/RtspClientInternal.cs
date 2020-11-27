@@ -108,6 +108,8 @@ namespace RtspClientSharp.Rtsp
             RtspResponseMessage playResponse = 
             await _rtspTransportClient.EnsureExecuteRequest(playRequest, token, 1);
 
+            _mediaPayloadParser.BaseTime = (initialTimeStamp != default(DateTime) ? initialTimeStamp : default(DateTime));
+
             // TODO : Create a specific parse to convert the clock values
             Regex clockRegex = new Regex(@"clock=(?<startTime>\d{8}T\d{6}Z)\-(?<endTime>\d{8}T\d{6}Z)", RegexOptions.Singleline);
             foreach (string playResponseHeader in playResponse.Headers.GetValues("Range"))
