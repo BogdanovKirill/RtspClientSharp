@@ -97,7 +97,7 @@ namespace RtspClientSharp.Rtsp
             bool anyTrackRequested = false;
             foreach (RtspMediaTrackInfo track in GetTracksToSetup(tracks))
             {
-                await SetupTrackAsync(track, token);
+                await SetupTrackAsync(initialTimeStamp, track, token);
                 anyTrackRequested = true;
             }
 
@@ -107,8 +107,6 @@ namespace RtspClientSharp.Rtsp
             RtspRequestMessage playRequest = (initialTimeStamp != default(DateTime) ? _requestMessageFactory.CreatePlayRequest(initialTimeStamp) : _requestMessageFactory.CreatePlayRequest());
             RtspResponseMessage playResponse = 
             await _rtspTransportClient.EnsureExecuteRequest(playRequest, token, 1);
-
-            _mediaPayloadParser.BaseTime = (initialTimeStamp != default(DateTime) ? initialTimeStamp : default(DateTime));
 
             // TODO : Create a specific parse to convert the clock values
             Regex clockRegex = new Regex(@"clock=(?<startTime>\d{8}T\d{6}Z)\-(?<endTime>\d{8}T\d{6}Z)", RegexOptions.Singleline);
@@ -199,7 +197,7 @@ namespace RtspClientSharp.Rtsp
             return RtcpReportIntervalBaseMs + _random.Next(0, 11) * 100;
         }
 
-        private async Task SetupTrackAsync(RtspMediaTrackInfo track, CancellationToken token)
+        private async Task SetupTrackAsync(DateTime initialTimeStamp, RtspMediaTrackInfo track, CancellationToken token)
         {
             RtspRequestMessage setupRequest;
             RtspResponseMessage setupResponse;
@@ -302,6 +300,7 @@ namespace RtspClientSharp.Rtsp
             ParseSessionHeader(setupResponse.Headers[WellKnownHeaders.Session]);
 
             _mediaPayloadParser = MediaPayloadParser.CreateFrom(track.Codec);
+            _mediaPayloadParser.BaseTime = (initialTimeStamp != default(DateTime) ? initialTimeStamp : default(DateTime));
 
             IRtpSequenceAssembler rtpSequenceAssembler;
 

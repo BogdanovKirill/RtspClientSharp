@@ -18,11 +18,11 @@ namespace RtspClientSharp.MediaParsers
 
         protected DateTime GetFrameTimestamp(TimeSpan timeOffset)
         {
-            if (timeOffset == TimeSpan.MinValue)
-                return DateTime.UtcNow;
-
             if (BaseTime == default(DateTime))
                 BaseTime = DateTime.UtcNow;
+
+            if (timeOffset == TimeSpan.MinValue)
+                return BaseTime;
 
             return BaseTime + timeOffset;
         }
