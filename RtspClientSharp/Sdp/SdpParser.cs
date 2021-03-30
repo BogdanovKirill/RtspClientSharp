@@ -47,6 +47,7 @@ namespace RtspClientSharp.Sdp
             string line;
             while (!string.IsNullOrEmpty(line = sdpStreamReader.ReadLine()))
             {
+
                 if (line[0] == 'm')
                     ParseMediaLine(line);
                 else if (line[0] == 'a')
@@ -216,8 +217,40 @@ namespace RtspClientSharp.Sdp
 
             if (payloadFormatInfo.CodecInfo is H264CodecInfo h264CodecInfo)
                 ParseH264FormatAttributes(formatAttributes, h264CodecInfo);
+            else if (payloadFormatInfo.CodecInfo is H265CodecInfo h265CodecInfo)
+                ParseH265FormatAttributes(formatAttributes, h265CodecInfo);
             else if (payloadFormatInfo.CodecInfo is AACCodecInfo aacCodecInfo)
                 ParseAACFormatAttributes(formatAttributes, aacCodecInfo);
+        }
+
+        private static void ParseH265FormatAttributes(string[] formatAttributes, H265CodecInfo h265CodecInfo)
+        {
+            string spropSpsSet = formatAttributes.FirstOrDefault(fa =>
+                fa.StartsWith("sprop-sps", StringComparison.InvariantCultureIgnoreCase));
+
+            if (spropSpsSet != null)
+            {
+                string spropSpsSetValue = GetFormatParameterValue(spropSpsSet);
+                h265CodecInfo.SpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropSpsSetValue)).ToArray();
+            }
+
+            string spropPpsSet = formatAttributes.FirstOrDefault(fa =>
+                fa.StartsWith("sprop-pps", StringComparison.InvariantCultureIgnoreCase));
+
+            if (spropPpsSet != null)
+            {
+                string spropPpsSetValue = GetFormatParameterValue(spropPpsSet);
+                h265CodecInfo.PpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropPpsSetValue)).ToArray();
+            }
+
+            string spropVpsSet = formatAttributes.FirstOrDefault(fa =>
+                fa.StartsWith("sprop-vps", StringComparison.InvariantCultureIgnoreCase));
+
+            if (spropVpsSet != null)
+            {
+                string spropVpsSetValue = GetFormatParameterValue(spropVpsSet);
+                h265CodecInfo.VpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropVpsSetValue)).ToArray();
+            }
         }
 
         private static void ParseH264FormatAttributes(string[] formatAttributes, H264CodecInfo h264CodecInfo)
@@ -340,6 +373,9 @@ namespace RtspClientSharp.Sdp
 
             if (codecName == "H264")
                 return new H264CodecInfo();
+
+            if (codecName == "H265")
+                return new H265CodecInfo();
 
             bool isPcmu = codecName == "PCMU";
             bool isPcma = codecName == "PCMA";
