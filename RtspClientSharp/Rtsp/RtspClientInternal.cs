@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using RtspClientSharp.Codecs.Audio;
+using RtspClientSharp.Codecs.Data;
 using RtspClientSharp.Codecs.Video;
 using RtspClientSharp.MediaParsers;
 using RtspClientSharp.RawFrames;
@@ -336,6 +337,8 @@ namespace RtspClientSharp.Rtsp
                     yield return track;
                 else if (track.Codec is AudioCodecInfo &&
                          (_connectionParameters.RequiredTracks & RequiredTracks.Audio) != 0)
+                    yield return track;
+                else if (track.Codec is DataCodecInfo && (_connectionParameters.RequiredTracks & RequiredTracks.Data) != 0)
                     yield return track;
             }
         }

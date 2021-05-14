@@ -7,6 +7,7 @@ namespace RtspClientSharp
     {
         Video = 1,
         Audio = 2,
+        Data = 4,
         All = Video | Audio
     }
 }
