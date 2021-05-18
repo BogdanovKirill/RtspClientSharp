@@ -54,6 +54,16 @@ namespace RtspClientSharp.Rtsp
             return rtspRequestMessage;
         }
 
+        public RtspRequestMessage CreateSetupUdpMulticastRequest(string trackName)
+        {
+            Uri trackUri = GetTrackUri(trackName);
+
+            var rtspRequestMessage = new RtspRequestMessage(RtspMethod.SETUP, trackUri, ProtocolVersion,
+                NextCSeqProvider, _userAgent, SessionId);
+            rtspRequestMessage.Headers.Add("Transport", $"RTP/AVP;multicast");
+            return rtspRequestMessage;
+        }
+
         public RtspRequestMessage CreatePlayRequest()
         {
             Uri uri = GetContentBasedUri();

@@ -20,7 +20,9 @@ namespace RtspClientSharp.UnitTests.Rtcp
             var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStatisticsProviderMock.Object,
                 rtcpSenderStatisticsProviderFake.Object, 1);
 
-            rtcpReportsProvider.GetReportPackets().ToList();
+            rtcpReportsProvider.GetReportSdesPackets().ToList();
+
+            rtcpReportsProvider.GetReportByePackets().ToList();
 
             rtpStatisticsProviderMock.Verify(x => x.ResetState());
         }
@@ -45,7 +47,7 @@ namespace RtspClientSharp.UnitTests.Rtcp
             var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStatisticsProviderFake.Object,
                 rtcpSenderStatisticsProviderFake.Object, 1112234);
 
-            IReadOnlyList<RtcpPacket> packets = rtcpReportsProvider.GetReportPackets().ToList();
+            IReadOnlyList<RtcpPacket> packets = rtcpReportsProvider.GetReportSdesPackets().ToList();
 
             var receiverReportPacket = (RtcpReceiverReportPacket) packets.First(p => p is RtcpReceiverReportPacket);
             Assert.IsFalse(receiverReportPacket.PaddingFlag);
@@ -60,6 +62,16 @@ namespace RtspClientSharp.UnitTests.Rtcp
             Assert.AreEqual(2 << 16 | 10u, receiverReportPacket.Reports[0].ExtHighestSequenceNumberReceived);
             Assert.AreEqual(1234u, receiverReportPacket.Reports[0].LastNtpTimeSenderReportReceived);
             Assert.AreEqual(0u, receiverReportPacket.Reports[0].DelaySinceLastTimeSenderReportReceived);
+
+            packets = rtcpReportsProvider.GetReportByePackets().ToList();
+
+            var receiverReportByePacket = (RtcpByePacket)packets.First(p => p is RtcpByePacket);
+            Assert.IsFalse(receiverReportByePacket.PaddingFlag);
+            Assert.AreNotEqual(0, receiverReportByePacket.SourceCount);
+            Assert.AreEqual(203, receiverReportByePacket.PayloadType);
+            Assert.AreNotEqual(0, receiverReportByePacket.DwordLength);
+            Assert.AreNotEqual(0, receiverReportByePacket.Length);
+            Assert.AreEqual(1112234u, receiverReportByePacket.SyncSourcesIds.First());
         }
 
         [TestMethod]
@@ -71,7 +83,7 @@ namespace RtspClientSharp.UnitTests.Rtcp
             var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStatisticsProviderFake.Object,
                 rtcpSenderStatisticsProviderFake.Object, 1112234);
 
-            IReadOnlyList<RtcpPacket> packets = rtcpReportsProvider.GetReportPackets().ToList();
+            IReadOnlyList<RtcpPacket> packets = rtcpReportsProvider.GetReportSdesPackets().ToList();
 
             var sdesReportPacket = (RtcpSdesReportPacket) packets.First(p => p is RtcpSdesReportPacket);
 
@@ -79,6 +91,22 @@ namespace RtspClientSharp.UnitTests.Rtcp
 
             var nameItem = (RtcpSdesNameItem) sdesReportPacket.Chunks[0].Items.First(i => i is RtcpSdesNameItem);
             Assert.IsNotNull(nameItem.DomainName);
+        }
+
+        [TestMethod]
+        public void GetReportPackets_TestDataProviders_ReturnsPacketWithByeReport()
+        {
+            var rtpStatisticsProviderFake = new Mock<IRtpStatisticsProvider>();
+            var rtcpSenderStatisticsProviderFake = new Mock<IRtcpSenderStatisticsProvider>();
+
+            var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStatisticsProviderFake.Object,
+                rtcpSenderStatisticsProviderFake.Object, 1112234);
+
+            IReadOnlyList<RtcpPacket> packets = rtcpReportsProvider.GetReportByePackets().ToList();
+
+            var byePacket = (RtcpByePacket)packets.First(p => p is RtcpByePacket);
+
+            Assert.AreEqual(1112234u, byePacket.SyncSourcesIds.First());
         }
     }
 }

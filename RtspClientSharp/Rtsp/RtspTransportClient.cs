@@ -17,6 +17,7 @@ namespace RtspClientSharp.Rtsp
         private Authenticator _authenticator;
 
         public abstract EndPoint RemoteEndPoint { get; }
+        public abstract EndPoint LocalEndPoint { get; }
 
         protected RtspTransportClient(ConnectionParameters connectionParameters)
         {
