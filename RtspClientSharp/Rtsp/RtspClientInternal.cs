@@ -190,8 +190,8 @@ namespace RtspClientSharp.Rtsp
 
             if (_connectionParameters.RtpTransport == RtpTransportProtocol.UDP)
             {
-                rtpClient = NetworkClientFactory.CreateUdpClient();
-                rtcpClient = NetworkClientFactory.CreateUdpClient();
+                rtpClient = _connectionParameters.SocketFactory.CreateUdpSocket();
+                rtcpClient = _connectionParameters.SocketFactory.CreateUdpSocket();
 
                 try
                 {

@@ -18,14 +18,17 @@ namespace RtspClientSharp.Rtsp
 
         public override EndPoint RemoteEndPoint => _remoteEndPoint;
 
+        public readonly ISocketFactory _tcpSocketFactory;
+
         public RtspTcpTransportClient(ConnectionParameters connectionParameters)
             : base(connectionParameters)
         {
+            _tcpSocketFactory = connectionParameters.SocketFactory;
         }
 
         public override async Task ConnectAsync(CancellationToken token)
         {
-            _tcpClient = NetworkClientFactory.CreateTcpClient();
+            _tcpClient = _tcpSocketFactory.CreateTcpSocket();
 
             Uri connectionUri = ConnectionParameters.ConnectionUri;
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using RtspClientSharp.Rtsp;
+using RtspClientSharp.Utils;
 
 namespace RtspClientSharp
 {
@@ -26,7 +27,10 @@ namespace RtspClientSharp
         public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(10);
         public TimeSpan CancelTimeout { get; set; } = TimeSpan.FromSeconds(5);
         public string UserAgent { get; set; } = DefaultUserAgent;
+
         public RtpTransportProtocol RtpTransport { get; set; } = RtpTransportProtocol.TCP;
+
+        public ISocketFactory SocketFactory { get; set; } = DefaultSocketFactory.Instance;
 
         public ConnectionParameters(Uri connectionUri)
         {
