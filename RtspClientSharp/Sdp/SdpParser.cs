@@ -29,6 +29,8 @@ namespace RtspClientSharp.Sdp
         private readonly Dictionary<int, PayloadFormatInfo> _payloadFormatNumberToInfoMap =
             new Dictionary<int, PayloadFormatInfo>();
 
+        private readonly List<PayloadFormatInfo> _payloadFormats = new List<PayloadFormatInfo>();
+
         private PayloadFormatInfo _lastParsedFormatInfo;
 
         public IEnumerable<RtspTrackInfo> Parse(ArraySegment<byte> payloadSegment)
@@ -39,6 +41,7 @@ namespace RtspClientSharp.Sdp
                 throw new ArgumentException("Empty SDP document", nameof(payloadSegment));
 
             _payloadFormatNumberToInfoMap.Clear();
+            _payloadFormats.Clear();
             _lastParsedFormatInfo = null;
 
             var sdpStream = new MemoryStream(payloadSegment.Array, payloadSegment.Offset, payloadSegment.Count);
@@ -53,7 +56,10 @@ namespace RtspClientSharp.Sdp
                     ParseAttributesLine(line);
             }
 
-            return _payloadFormatNumberToInfoMap.Values
+            //return _payloadFormatNumberToInfoMap.Values
+            //    .Where(fi => fi.TrackName != null && fi.CodecInfo != null)
+            //    .Select(fi => new RtspMediaTrackInfo(fi.TrackName, fi.CodecInfo, fi.SamplesFrequency));
+            return _payloadFormats
                 .Where(fi => fi.TrackName != null && fi.CodecInfo != null)
                 .Select(fi => new RtspMediaTrackInfo(fi.TrackName, fi.CodecInfo, fi.SamplesFrequency));
         }
@@ -80,6 +86,8 @@ namespace RtspClientSharp.Sdp
             int samplesFrequency = GetSamplesFrequencyFromPayloadType(payloadFormatNumber);
 
             _lastParsedFormatInfo = new PayloadFormatInfo(codecInfo, samplesFrequency);
+
+            _payloadFormats.Add(_lastParsedFormatInfo);
             _payloadFormatNumberToInfoMap[payloadFormatNumber] = _lastParsedFormatInfo;
         }
 
