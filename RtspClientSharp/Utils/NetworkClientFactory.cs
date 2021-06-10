@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 
 namespace RtspClientSharp.Utils
 {
@@ -27,7 +28,16 @@ namespace RtspClientSharp.Utils
                 ReceiveBufferSize = UdpReceiveBufferDefaultSize,
                 DualMode = true
             };
-            socket.IOControl((IOControlCode)SIO_UDP_CONNRESET, EmptyOptionInValue, null);
+
+            try
+            {
+                socket.IOControl((IOControlCode)SIO_UDP_CONNRESET, EmptyOptionInValue, null);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                
+            }
+            
             return socket;
         }
     }
