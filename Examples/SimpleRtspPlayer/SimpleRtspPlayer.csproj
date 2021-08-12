@@ -233,4 +233,8 @@
 		xcopy $(ProjectDir)..\libffmpeghelper\x64\$(Configuration)\libffmpeghelper.dll  $(TargetDir)  /Y /E /C /F
 	</PostBuildEvent>
   </PropertyGroup>
+  <PropertyGroup>
+    <PostBuildEvent>copy $(ProjectDir)$(PlatformName)\*.dll $(TargetDir)
+copy $(ProjectDir)..\libffmpeghelper\$(PlatformName)\$(ConfigurationName)\libffmpeghelper.dll $(TargetDir)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

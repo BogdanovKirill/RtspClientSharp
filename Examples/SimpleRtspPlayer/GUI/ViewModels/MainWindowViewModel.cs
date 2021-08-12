@@ -74,7 +74,7 @@ namespace SimpleRtspPlayer.GUI.ViewModels
             var connectionParameters = !string.IsNullOrEmpty(deviceUri.UserInfo) ? new ConnectionParameters(deviceUri) : 
                 new ConnectionParameters(deviceUri, credential);
 
-            connectionParameters.RtpTransport = RtpTransportProtocol.UDP;
+            connectionParameters.RtpTransport = RtpTransportProtocol.TCP;
             connectionParameters.CancelTimeout = TimeSpan.FromSeconds(1);
 
             _mainWindowModel.Start(connectionParameters);

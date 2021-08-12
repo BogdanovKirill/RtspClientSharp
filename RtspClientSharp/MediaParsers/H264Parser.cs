@@ -24,7 +24,7 @@ namespace RtspClientSharp.MediaParsers
         private readonly BitStreamReader _bitStreamReader = new BitStreamReader();
         private readonly Dictionary<int, byte[]> _spsMap = new Dictionary<int, byte[]>();
         private readonly Dictionary<int, byte[]> _ppsMap = new Dictionary<int, byte[]>();
-        private bool _waitForIFrame = true;
+        private bool _waitForIFrame = false;
         private byte[] _spsPpsBytes = new byte[0];
         private bool _updateSpsPpsBytes;
         private int _sliceType = -1;
@@ -99,7 +99,7 @@ namespace RtspClientSharp.MediaParsers
         {
             _frameStream.Position = 0;
             _sliceType = -1;
-            _waitForIFrame = true;
+            _waitForIFrame = false;
         }
 
         private void SlicerOnNalUnitFound(ArraySegment<byte> byteSegment)
