@@ -38,6 +38,8 @@ namespace RtspClientSharp.MediaParsers
             {
                 case H264CodecInfo h264CodecInfo:
                     return new H264VideoPayloadParser(h264CodecInfo);
+                case H265CodecInfo h265CodecInfo:
+                    return new H265VideoPayloadParser(h265CodecInfo);
                 case MJPEGCodecInfo _:
                     return new MJPEGVideoPayloadParser();
                 case AACCodecInfo aacCodecInfo:
