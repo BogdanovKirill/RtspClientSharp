@@ -25,10 +25,13 @@ namespace RtspClientSharp.MediaParsers
 
                 if (tailLength == RawH265Frame.StartMarkerSize)
                     return;
+                
+                int nalUnitType = (byteSegment.Array[nalUnitStartIndex + RawH265Frame.StartMarkerSize] >> 1) & 0x3F;
 
-                RtpH265NALUType nalUnitType = (RtpH265NALUType)(byteSegment.Array[nalUnitStartIndex + RawH265Frame.StartMarkerSize] & 0x1F);
+                if (!RtpH265TypeUtils.CheckIfIsValid(nalUnitType))
+                    throw new H265ParserException($"Invalid Nal Unit Type { nalUnitType }");
 
-                if (nalUnitType == RtpH265NALUType.TSA_N)
+                if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.IDR_W_RADL || (RtpH265NALUType)nalUnitType == RtpH265NALUType.IDR_N_LP)
                 {
                     nalUnitHandler?.Invoke(new ArraySegment<byte>(byteSegment.Array, nalUnitStartIndex, tailLength));
                 }

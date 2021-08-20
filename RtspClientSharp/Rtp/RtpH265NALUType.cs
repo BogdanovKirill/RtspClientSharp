@@ -1,4 +1,8 @@
-﻿namespace RtspClientSharp.Rtp
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace RtspClientSharp.Rtp
 {
     public enum RtpH265NALUType
     {
@@ -58,5 +62,15 @@
         RTPHEVC_AP = 48, // RTP HEVC Aggregation Packet
         RTPHEVC_FP = 49  // RTP HEVC Fragmentation Packet
         #endregion
+    }
+
+    public static class RtpH265TypeUtils
+    {
+        public static bool CheckIfIsValid(int nalUType)
+        {
+            List<RtpH265NALUType> rtpNalUnitTypes = Enum.GetValues(typeof(RtpH265NALUType)).Cast<RtpH265NALUType>().ToList();
+
+            return rtpNalUnitTypes.Where(n => (int)n == nalUType).Count() > 0;
+        }
     }
 }
