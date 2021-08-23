@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace RtspClientSharp.MediaParsers
 {
-    class H265VideoHeaderParser
+    class H265Parser
     {
         public static readonly ArraySegment<byte> StartMarkSegment = new ArraySegment<byte>(RawH265Frame.StartMarker);
 
@@ -29,6 +29,11 @@ namespace RtspClientSharp.MediaParsers
                 RawH265Frame.StartMarker))
                 H265Slicer.Slice(byteSegment, SliceOnNalUnitFound);
 
+        }
+
+        public void ResetState()
+        {
+            throw new NotImplementedException();
         }
 
         private void SliceOnNalUnitFound(ArraySegment<byte> byteSegment)

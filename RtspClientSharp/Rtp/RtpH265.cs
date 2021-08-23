@@ -66,6 +66,12 @@ namespace RtspClientSharp.Rtp
 
     public static class RtpH265TypeUtils
     {
+        public const int RtpHevcPayloadHeaderSize = 2;
+        public const int RtpHevcFuHeaderSize = 1;
+        public const int RtpHevcDonlFieldSize = 2;
+        public const int RtpHevcDondFieldSize = 1;
+        public const int RtpHevcApNaluLengthFieldSize = 2;
+
         public static bool CheckIfIsValid(int nalUType)
         {
             List<RtpH265NALUType> rtpNalUnitTypes = Enum.GetValues(typeof(RtpH265NALUType)).Cast<RtpH265NALUType>().ToList();
