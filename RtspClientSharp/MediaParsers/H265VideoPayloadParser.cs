@@ -35,7 +35,7 @@ namespace RtspClientSharp.MediaParsers
             if (codecInfo.PpsBytes.Length != 0)
                 _h265Parser.Parse(new ArraySegment<byte>(codecInfo.PpsBytes), false);
 
-            _nalStream = new MemoryStream(4 * 1024);
+            _nalStream = new MemoryStream(8 * 1024);
         }
 
         public override void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit)
@@ -55,8 +55,13 @@ namespace RtspClientSharp.MediaParsers
 
             switch (packMode)
             {
+                /*  supplemental enhancement information (SEI) */
                 case RtpH265NALUType.PREFIX_SEI_NUT:
                     break;
+                /* aggregated packet (AP) - with two or more NAL units */
+                case RtpH265NALUType.RTPHEVC_AP:
+                    break;
+                /* fragmentation unit (FU) */
                 case RtpH265NALUType.RTPHEVC_FP:
                     DecodeFP(byteSegment, RtpH265TypeUtils.RtpHevcDonlFieldSize, true);
                     break;
@@ -89,12 +94,14 @@ namespace RtspClientSharp.MediaParsers
             *       End fragment (E): 1 bit
             *       FuType: 6 bits
             */
+
+            /* pass the HEVC payload header */
             int offset = byteSegment.Offset + RtpH265TypeUtils.RtpHevcPayloadHeaderSize;
             int fuHeader = byteSegment.Array[offset];
             bool firstFragment = (fuHeader & 0x80) != 0;
             bool lastFragment = (fuHeader & 0x40) != 0;
 
-            if (!firstFragment && !lastFragment)
+            if (firstFragment && lastFragment)
                 throw new H264ParserException($"Illegal combination of S and E bit in RTP/HEVC packet");
 
             if (firstFragment)

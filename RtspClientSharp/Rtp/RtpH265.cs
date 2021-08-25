@@ -64,6 +64,14 @@ namespace RtspClientSharp.Rtp
         #endregion
     }
 
+    public enum SliceType
+    {
+        Undefined = -1,
+        BSlice = 0,
+        PSlice = 1,
+        ISlice = 2,
+    }
+
     public static class RtpH265TypeUtils
     {
         public const int RtpHevcPayloadHeaderSize = 2;
@@ -71,6 +79,13 @@ namespace RtspClientSharp.Rtp
         public const int RtpHevcDonlFieldSize = 2;
         public const int RtpHevcDondFieldSize = 1;
         public const int RtpHevcApNaluLengthFieldSize = 2;
+        //7.4.2.1
+        public const int MakxSubLayers = 7;
+        public const int MaxVpsCount = 16;
+        public const int MaxSpsCount = 32;
+        public const int MaxPpsCount = 256;
+        public const int MaxShortTermRpsCount = 64;
+        public const int MaxCuSize = 128;
 
         public static bool CheckIfIsValid(int nalUType)
         {
