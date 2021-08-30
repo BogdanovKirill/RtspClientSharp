@@ -15,8 +15,8 @@ namespace RtspClientSharp.Rtsp
 {
     class RtspHttpTransportClient : RtspTransportClient
     {
-        private Socket _streamDataClient;
-        private Socket _commandsClient;
+        private IRtspSocket _streamDataClient;
+        private IRtspSocket _commandsClient;
         private string _sessionCookie;
         private Authenticator _authenticator;
         private Stream _dataNetworkStream;
@@ -26,9 +26,12 @@ namespace RtspClientSharp.Rtsp
 
         public override EndPoint RemoteEndPoint => _remoteEndPoint;
 
+        public readonly ISocketFactory _tcpSocketFactory;
+
         public RtspHttpTransportClient(ConnectionParameters connectionParameters)
             : base(connectionParameters)
         {
+            _tcpSocketFactory = connectionParameters.SocketFactory;
         }
 
         public override async Task ConnectAsync(CancellationToken token)
@@ -36,7 +39,7 @@ namespace RtspClientSharp.Rtsp
             _commandCounter = 0;
             _sessionCookie = Guid.NewGuid().ToString("N").Substring(0, 10);
 
-            _streamDataClient = NetworkClientFactory.CreateTcpClient();
+            _streamDataClient = _tcpSocketFactory.CreateTcpSocket();
 
             Uri connectionUri = ConnectionParameters.ConnectionUri;
 
@@ -45,7 +48,7 @@ namespace RtspClientSharp.Rtsp
             await _streamDataClient.ConnectAsync(connectionUri.Host, httpPort);
 
             _remoteEndPoint = _streamDataClient.RemoteEndPoint;
-            _dataNetworkStream = new NetworkStream(_streamDataClient, false);
+            _dataNetworkStream = _streamDataClient.CreateNetworkStream();
 
             string request = ComposeGetRequest();
             byte[] requestBytes = Encoding.ASCII.GetBytes(request);
@@ -114,7 +117,7 @@ namespace RtspClientSharp.Rtsp
 
         protected override async Task WriteAsync(byte[] buffer, int offset, int count)
         {
-            using (_commandsClient = NetworkClientFactory.CreateTcpClient())
+            using (_commandsClient = _tcpSocketFactory.CreateTcpSocket())
             {
                 Uri connectionUri = ConnectionParameters.ConnectionUri;
 

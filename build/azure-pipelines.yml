@@ -1,0 +1,89 @@
+# Nuget build pipeline
+# 
+# https://aka.ms/yaml
+
+trigger:
+- beta
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+
+- template: build_tools_setup.yml
+
+- task: SonarCloudPrepare@1
+  enabled: false
+  inputs:
+    SonarCloud: 'IDS3'
+    organization: 'idselectronics'
+    scannerMode: 'MSBuild'
+    projectKey: '$(sonar-project-key)'
+    projectName: '$(sonar-project-name)'
+
+- task: GitVersion@5
+  inputs:
+    runtime: 'core'
+
+- task: NuGetCommand@2
+  displayName: 'NuGet restore'
+  inputs:
+    command: 'restore'
+    restoreSolution: '$(build-solution)'
+    feedsToUse: 'select'
+    vstsFeed: 'f703c69c-2dfa-4eb0-bf6f-c5a65ea32777'
+
+- task: MSBuild@1
+  displayName: 'NuGet build and pack - Production'
+  inputs:
+    solution: '$(build-project)'
+    msbuildArchitecture: 'x64'
+    configuration: '$(BuildConfiguration)'
+    msbuildArguments: '/t:build;pack /p:PackageVersion=$(buildversion) /p:AssemblyFileVersion=$(buildversion)'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+
+- task: MSBuild@1
+  displayName: 'NuGet build and pack - Pre-production'
+  inputs:
+    solution: '$(build-project)'
+    msbuildArchitecture: 'x64'
+    configuration: '$(BuildConfiguration)'
+    msbuildArguments: '/t:build;pack /p:PackageVersion=$(buildversion)-beta /p:PackageOutputPath=$(build.artifactstagingdirectory)/public /p:AssemblyFileVersion=$(buildversion)'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/beta'))
+
+- task: MSBuild@1
+  displayName: 'NuGet build Pull Request'
+  inputs:
+    solution: '$(build-project)'
+    msbuildArchitecture: 'x64'
+    configuration: '$(BuildConfiguration)'
+    msbuildArguments: '/t:build;pack /p:PackageVersion=$(buildversion)-beta /p:PackageOutputPath=$(build.artifactstagingdirectory)/public /p:AssemblyFileVersion=$(buildversion)'
+  condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+
+
+- task: VSTest@2
+  inputs:
+    testSelector: 'testAssemblies'
+    testAssemblyVer2: |
+      **\*test*.dll
+      !**\*TestAdapter.dll
+      !**\obj\**
+    searchFolder: '$(System.DefaultWorkingDirectory)'
+    codeCoverageEnabled: True
+    
+- task: SonarCloudAnalyze@1
+  enabled: false
+
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory) '
+  inputs:
+    SourceFolder: '$(build.sourcesdirectory)'
+    Contents: '**\bin\$(BuildConfiguration)\**\*.nupkg'
+    TargetFolder: '$(build.artifactstagingdirectory) '
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'

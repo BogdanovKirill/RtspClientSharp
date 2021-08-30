@@ -1,0 +1,25 @@
+#Setup Build tools
+#Input variables
+# dotnet_version = version of dotnet to install
+# nuget_version = version of nuget to install
+
+steps:
+- task: NuGetToolInstaller@1
+  displayName: 'Use NuGet $(nuget_version)'
+  inputs:
+    versionSpec: '$(nuget_version)'
+
+- task: UseDotNet@2
+  inputs:
+    packageType: 'runtime'
+    version: '2.1.0'
+
+- task: UseDotNet@2
+  inputs:
+    packageType: 'runtime'
+    version: '2.2.0'
+
+- task: UseDotNet@2
+  displayName: 'Use .Net Core sdk $(dotnet_version)'
+  inputs:
+    version: '$(dotnet_version)'
