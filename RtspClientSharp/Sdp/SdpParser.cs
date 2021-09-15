@@ -283,6 +283,14 @@ namespace RtspClientSharp.Sdp
                 string spropPpsSetValue = GetFormatParameterValue(spropPpsSet);
                 h265CodecInfo.PpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropPpsSetValue)).ToArray();
             }
+
+            string spropMaxDonDiffSet = formatAttributes.FirstOrDefault(fa =>
+                fa.StartsWith("sprop-max-don-diff", StringComparison.InvariantCultureIgnoreCase));
+
+            if(spropMaxDonDiffSet != null)
+            {
+                h265CodecInfo.HasDonlField = true;
+            }
         }
 
         private static void ParseAACFormatAttributes(string[] formatAttributes, AACCodecInfo aacCodecInfo)

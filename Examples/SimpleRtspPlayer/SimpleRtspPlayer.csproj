@@ -125,6 +125,9 @@
     <Compile Include="GUI\Models\MainWindowModel.cs" />
     <Compile Include="GUI\RealtimeAudioSource.cs" />
     <Compile Include="GUI\IAudioSource.cs" />
+    <Compile Include="GUI\Views\Logger.xaml.cs">
+      <DependentUpon>Logger.xaml</DependentUpon>
+    </Compile>
     <Compile Include="RawFramesDecoding\DecodedFrames\DecodedAudioFrame.cs" />
     <Compile Include="RawFramesDecoding\DecodedFrames\DecodedVideoFrame.cs" />
     <Compile Include="RawFramesDecoding\DecodedFrames\IDecodedAudioFrame.cs" />
@@ -151,6 +154,10 @@
     <Compile Include="GUI\Views\VideoView.xaml.cs">
       <DependentUpon>VideoView.xaml</DependentUpon>
     </Compile>
+    <Page Include="GUI\Views\Logger.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="GUI\Views\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

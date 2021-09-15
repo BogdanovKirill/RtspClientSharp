@@ -20,6 +20,7 @@ namespace RtspClientSharp.MediaParsers
         private readonly Dictionary<int, byte[]> _ppsMap = new Dictionary<int, byte[]>();
         private byte[] _parametersBytes = new byte[0];
         private bool _updatedParametersBytes;
+        private bool _usingDonlField;
 
         public Action<RawFrame> FrameGenerated;
 
@@ -30,8 +31,12 @@ namespace RtspClientSharp.MediaParsers
             if (ArrayUtils.StartsWith(byteSegment.Array, byteSegment.Offset, byteSegment.Count,
                 RawH265Frame.StartMarker))
                 H265Slicer.Slice(byteSegment, SliceOnNalUnitFound);
-
+            else
+                ProcessNalUnit(byteSegment, false, ref generateFrame);
         }
+
+        public void SetUsingDonlField(bool usingDonlField)
+            => _usingDonlField = usingDonlField;
 
         public void ResetState()
         {
@@ -68,7 +73,7 @@ namespace RtspClientSharp.MediaParsers
 
             // forbidden_zero_bit must be 0
             if (!(byteSegment.Array[offset] >> 0x0F == 0))
-                return;
+                throw new H265ParserException($"Forbidden zero bit's different than zero.");
 
             int nalUnitType = (byteSegment.Array[offset] >> 1) & 0x3F;
             int layerId = ((byteSegment.Array[offset] << 5) & 0x20) | ((byteSegment.Array[offset + 1] >> 3) & 0x1F);
@@ -76,15 +81,15 @@ namespace RtspClientSharp.MediaParsers
 
             //Required to be equal to zero
             if (layerId != 0)
-                throw new H265ParserException($"Invalid LayerId { layerId }");
+                throw new H265ParserException($"Invalid LayerId { layerId }.");
 
             //The value of TemporalId is equal to TID minus 1. A TID value of 0 is illegal...
             if (temporalId == 0)
-                throw new H265ParserException($"Invalid TemporalId (TID) { temporalId }");
+                throw new H265ParserException($"Invalid TemporalId (TID) { temporalId }.");
 
             //Checking Nal unit type
             if (!RtpH265TypeUtils.CheckIfIsValid(nalUnitType))
-                throw new H265ParserException($"Invalid (HEVC) NAL Unit Type { nalUnitType }");
+                throw new H265ParserException($"Invalid (HEVC) NAL Unit Type { nalUnitType }.");
 
             if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.VPS_NUT)
             {
@@ -107,32 +112,32 @@ namespace RtspClientSharp.MediaParsers
 
         private void ParseVps(ArraySegment<byte> byteSegment, bool hasStartMarker)
         {
-            const int vpsMinSize = 0;
+            const int vpsOffset = 1;
 
-            if (byteSegment.Count < vpsMinSize)
+            if (byteSegment.Count < vpsOffset)
                 return;
 
-            ProcessParameters(byteSegment, hasStartMarker, vpsMinSize - 1, _vpsMap);
+            ProcessParameters(byteSegment, hasStartMarker, vpsOffset - 1, _vpsMap);
         }
 
         private void ParseSps(ArraySegment<byte> byteSegment, bool hasStartMarker)
         {
-            const int spsMinSize = 0;
+            const int spsOffset = 1;
 
-            if (byteSegment.Count < spsMinSize)
+            if (byteSegment.Count < spsOffset)
                 return;
 
-            ProcessParameters(byteSegment, hasStartMarker, spsMinSize - 1, _spsMap);
+            ProcessParameters(byteSegment, hasStartMarker, spsOffset - 1, _spsMap);
         }
 
         private void ParsePps(ArraySegment<byte> byteSegment, bool hasStartMarker)
         {
-            const int ppsMinSize = 0;
+            const int ppsOffset = 1;
 
-            if (byteSegment.Count < ppsMinSize)
+            if (byteSegment.Count < ppsOffset)
                 return;
 
-            ProcessParameters(byteSegment, hasStartMarker, ppsMinSize - 1, _ppsMap);
+            ProcessParameters(byteSegment, hasStartMarker, ppsOffset - 1, _ppsMap);
         }
 
         private void ProcessParameters(ArraySegment<byte> byteSegment, bool hasStartMarker, int offset,
