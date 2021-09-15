@@ -120,7 +120,7 @@ namespace RtspClientSharp.MediaParsers
             int nalUnitType = byteSegment.Array[offset] & 0x1F;
             bool nri = ((byteSegment.Array[offset] >> 5) & 3) == 0;
 
-            if (!(nalUnitType > 0 && nalUnitType < 24))
+            if (!(nalUnitType > -1 && nalUnitType < 32))
                 throw new H264ParserException($"Invalid nal unit type: {nalUnitType}");
 
             if (nalUnitType == 7)
