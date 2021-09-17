@@ -18,9 +18,6 @@ namespace RtspClientSharp.MediaParsers
         private bool _usingDonlField;
         private TimeSpan _timeOffset = TimeSpan.MinValue;
 
-        int receivedFUs;
-
-
         public H265VideoPayloadParser(H265CodecInfo codecInfo)
         {
             ValidateCodecInfo(codecInfo);
@@ -33,8 +30,6 @@ namespace RtspClientSharp.MediaParsers
             CheckBytesLength(codecInfo);
 
             _nalStream = new MemoryStream(8 * 1024);
-
-            receivedFUs = 0;
         }
 
         public override void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit)
@@ -67,8 +62,6 @@ namespace RtspClientSharp.MediaParsers
 
             RtpH265NALUType packMode = (RtpH265NALUType)nalUnit;
 
-            PlayerLogger.fLogMethod($"Received NAL unit { packMode }\n");
-
             switch (packMode)
             {
                 /*  supplemental enhancement information (SEI) */
@@ -80,9 +73,6 @@ namespace RtspClientSharp.MediaParsers
                     break;
                 /* fragmentation unit (FU) */
                 case RtpH265NALUType.RTPHEVC_FP:
-                    receivedFUs++;
-                    PlayerLogger.fLogMethod($"Fragmentation Unit { receivedFUs } byteArray\n");
-                    PlayerLogger.fLogMethod(PlayerLogger.LogArray(byteSegment.Array));
                     DecodeFP(byteSegment, true);
                     break;
                 default:
@@ -179,8 +169,8 @@ namespace RtspClientSharp.MediaParsers
                 int[] newNalHeader = new int[2];
 
                 // Reconstrut the NAL header from the rtp payload header, replacing the Type with FU Type           
-                newNalHeader[0] = (byteSegment.Array[offset] & 0x81) | (fuType << 1);
-                newNalHeader[1] = byteSegment.Array[offset + 1];
+                newNalHeader[0] = (byteSegment.Array[byteSegment.Offset] & 0x81) | (fuType << 1);
+                newNalHeader[1] = byteSegment.Array[byteSegment.Offset + 1];
 
                 offset += newNalHeader.Length;
 
@@ -194,10 +184,7 @@ namespace RtspClientSharp.MediaParsers
                 _nalStream.WriteByte((byte)newNalHeader[1]);
 
                 _nalStream.Write(nalUnitSegment.Array, nalUnitSegment.Offset, nalUnitSegment.Count);
-
-                PlayerLogger.fLogMethod($"_nalStream after FU { receivedFUs } \n");
-                PlayerLogger.fLogMethod(PlayerLogger.LogArray(_nalStream.ToArray()));
-
+                
                 _waitForStartFu = false;
 
                 return;
@@ -207,20 +194,11 @@ namespace RtspClientSharp.MediaParsers
                 return;
 
             _nalStream.Write(byteSegment.Array, byteSegment.Offset, byteSegment.Offset + byteSegment.Count - offset);
-            PlayerLogger.fLogMethod($"_nalStream after FU { receivedFUs } ");
-            PlayerLogger.fLogMethod(PlayerLogger.LogArray(_nalStream.ToArray()));
-
+           
             if (endMarker)
             {
-                // End part of Fragment
-                PlayerLogger.fLogMethod($"_nalStream after endMarker FU { receivedFUs } ");
-                PlayerLogger.fLogMethod(PlayerLogger.LogArray(_nalStream.ToArray()));
-
+                // End part of Fragment               
                 var nalUnitSegment = new ArraySegment<byte>(_nalStream.GetBuffer(), 0, (int)_nalStream.Position);
-
-                PlayerLogger.fLogMethod("reconstructed NAL unit (extracted from _nalStream)");
-                PlayerLogger.fLogMethod(PlayerLogger.LogArray(_nalStream.ToArray()));
-
                 _nalStream.Position = 0;
                 _h265Parser.Parse(nalUnitSegment, markerBit);
                 _waitForStartFu = true;

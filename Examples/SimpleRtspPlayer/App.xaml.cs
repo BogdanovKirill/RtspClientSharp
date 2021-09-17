@@ -13,7 +13,7 @@ namespace SimpleRtspPlayer
         {
             base.OnActivated(e);
 
-            LoggerWindow.Instance.Show();
+            //LoggerWindow.Instance.Show();
         }
     }
 }
