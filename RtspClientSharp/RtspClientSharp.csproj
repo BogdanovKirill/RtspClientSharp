@@ -54,4 +54,8 @@ More info: https://github.com/BogdanovKirill/RtspClientSharp/issues/49</PackageR
     <DocumentationFile>bin\Release\netstandard2.0\RtspClientSharp.xml</DocumentationFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Logger\Logger.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -80,6 +80,5 @@
         </StackPanel>
         <TextBlock Margin="2" Grid.Row="3" Text="Supported codecs: H264/H265/MJPEG; Use &quot;http:&#47;&#47;&quot; prefix in address to connect through HTTP tunnel" />
         <TextBlock Margin="2" Grid.Row="4" Height="20" Background="LightGray" Text="{Binding Status}" />
-        <views:Logger Grid.Column="1" Grid.Row="0" Grid.RowSpan="5" />
     </Grid>
 </Window>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Logger;
 using RtspClientSharp.Codecs;
 using RtspClientSharp.Codecs.Audio;
 using RtspClientSharp.Codecs.Video;
@@ -289,6 +290,7 @@ namespace RtspClientSharp.Sdp
 
             if(spropMaxDonDiffSet != null)
             {
+                PlayerLogger.fLogMethod($"sprop-max-don-diff: { spropMaxDonDiffSet }\n");
                 h265CodecInfo.HasDonlField = true;
             }
         }
