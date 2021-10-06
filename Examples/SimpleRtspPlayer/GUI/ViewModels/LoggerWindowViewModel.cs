@@ -1,24 +1,34 @@
 ﻿using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
 using Logger;
+using SimpleRtspPlayer.RawFramesDecoding.FFmpeg;
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using LoggerWindow = SimpleRtspPlayer.GUI.Views.LoggerWindow;
 
 namespace SimpleRtspPlayer.GUI.ViewModels
 {
-    public class LoggerWindowViewModel : ViewModelBase
+    public unsafe class LoggerWindowViewModel : ViewModelBase
     {
         private bool _canExecute = true;
 
         public RelayCommand SaveLogToFileCommand { get; }
         public RelayCommand ClearLogCommand { get; }
 
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void LogDelegate(byte* data);
+
+        public static LogDelegate logDelegate;
+
         public LoggerWindowViewModel()
         {
             PlayerLogger.fLogMethod = (s) => OnLogUpdated(s);
+            logDelegate = new LogDelegate(PlayerLogger.LogDllOutput);
+            
+            FFmpegVideoPInvoke.SetLogMethod(Marshal.GetFunctionPointerForDelegate(logDelegate));
 
             SaveLogToFileCommand = new RelayCommand(OnSaveLogToFile, () => _canExecute);
             ClearLogCommand = new RelayCommand(OnClearLog, () => _canExecute);
@@ -47,7 +57,7 @@ namespace SimpleRtspPlayer.GUI.ViewModels
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                LoggerWindow.Instance.logTextBox.AppendText(info);
+                LoggerWindow.Instance.logTextBox.AppendText($"{ info }\n");
                 LoggerWindow.Instance.logTextBox.CaretIndex = LoggerWindow.Instance.logTextBox.Text.Length;
                 LoggerWindow.Instance.logTextBox.ScrollToEnd();
             });

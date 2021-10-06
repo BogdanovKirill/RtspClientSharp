@@ -1,4 +1,5 @@
-﻿using RtspClientSharp.RawFrames.Video;
+﻿using Logger;
+using RtspClientSharp.RawFrames.Video;
 using RtspClientSharp.Rtp;
 using RtspClientSharp.Utils;
 using System;
@@ -13,11 +14,16 @@ namespace RtspClientSharp.MediaParsers
         public static void Slice(ArraySegment<byte> byteSegment, Action<ArraySegment<byte>> nalUnitHandler)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
-            Debug.Assert(ArrayUtils.StartsWith(byteSegment.Array, byteSegment.Offset, byteSegment.Count, RawH265Frame.StartMarker));
+            Debug.Assert(ArrayUtils.StartsWith(byteSegment.Array, byteSegment.Offset, byteSegment.Count, 
+                RawH265Frame.StartMarker));
 
             int endIndex = byteSegment.Offset + byteSegment.Count;
 
-            int nalUnitStartIndex = ArrayUtils.IndexOfBytes(byteSegment.Array, RawH265Frame.StartMarker, byteSegment.Offset, byteSegment.Count);
+            int nalUnitStartIndex = ArrayUtils.IndexOfBytes(byteSegment.Array, RawH265Frame.StartMarker, 
+                byteSegment.Offset, byteSegment.Count);
+
+            if (nalUnitStartIndex == -1)
+                nalUnitHandler?.Invoke(byteSegment);
 
             while (true)
             {
@@ -31,9 +37,10 @@ namespace RtspClientSharp.MediaParsers
                 if (!RtpH265TypeUtils.CheckIfIsValid(nalUnitType))
                     throw new H265ParserException($"Invalid (HEVC) NAL Unit Type { nalUnitType }");
 
-                if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.IDR_W_RADL || (RtpH265NALUType)nalUnitType == RtpH265NALUType.IDR_N_LP)
+                if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.IDR_W_RADL || (RtpH265NALUType)nalUnitType == RtpH265NALUType.TRAIL_R)
                 {
                     nalUnitHandler?.Invoke(new ArraySegment<byte>(byteSegment.Array, nalUnitStartIndex, tailLength));
+                    return;
                 }
 
                 int nextNalUnitStartIndex = ArrayUtils.IndexOfBytes(byteSegment.Array, RawH265Frame.StartMarker, 

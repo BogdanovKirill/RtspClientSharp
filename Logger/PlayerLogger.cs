@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Logger
@@ -8,6 +9,16 @@ namespace Logger
         public delegate void OnLog(string info);
 
         public static OnLog fLogMethod;
+
+        public unsafe static void LogDllOutput(byte* data)
+        {
+            var vData = Marshal.PtrToStringAnsi((IntPtr)data);
+
+            if (fLogMethod != null)
+            {
+                fLogMethod(vData);
+            }
+        }
 
         public static string LogArray<T>(T[] arrayToLog)
         {

@@ -112,6 +112,8 @@ namespace RtspClientSharp.Sdp
 
             string attributeValue = line.Substring(colonIndex).TrimStart();
 
+            //PlayerLogger.fLogMethod($"ParseAttributesLine { attributeName } { attributeValue }");
+
             switch (attributeName)
             {
                 case "RTPMAP":
@@ -257,13 +259,14 @@ namespace RtspClientSharp.Sdp
         }
 
         private static void ParseH265FormatAttributes(string[] formatAttributes, H265CodecInfo h265CodecInfo)
-        { 
+        {
             string spropVpsSet = formatAttributes.FirstOrDefault(fa =>
                 fa.StartsWith("sprop-vps", StringComparison.InvariantCultureIgnoreCase));
 
             if (spropVpsSet != null)
             {
                 string spropVpsSetValue = GetFormatParameterValue(spropVpsSet);
+
                 h265CodecInfo.VpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropVpsSetValue)).ToArray();
             }
 
@@ -273,6 +276,7 @@ namespace RtspClientSharp.Sdp
             if (spropSpsSet != null)
             {
                 string spropSpsSetValue = GetFormatParameterValue(spropSpsSet);
+
                 h265CodecInfo.SpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropSpsSetValue)).ToArray();
             }
 
@@ -282,16 +286,43 @@ namespace RtspClientSharp.Sdp
             if (spropPpsSet != null)
             {
                 string spropPpsSetValue = GetFormatParameterValue(spropPpsSet);
+
                 h265CodecInfo.PpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropPpsSetValue)).ToArray();
             }
 
+
+            /* sprop-max-don-diff: 0-32767
+
+                 When the RTP stream depends on one or more other RTP
+                 streams (in this case tx-mode MUST be equal to "MSM" and
+                 MSM is in use), this parameter MUST be present and the
+                 value MUST be greater than 0.
+            */
             string spropMaxDonDiffSet = formatAttributes.FirstOrDefault(fa =>
                 fa.StartsWith("sprop-max-don-diff", StringComparison.InvariantCultureIgnoreCase));
 
-            if(spropMaxDonDiffSet != null)
+            if (spropMaxDonDiffSet != null)
             {
-                PlayerLogger.fLogMethod($"sprop-max-don-diff: { spropMaxDonDiffSet }\n");
-                h265CodecInfo.HasDonlField = true;
+                int donlField;
+                bool spropMaxDonDiffValue = int.TryParse(GetFormatParameterValue(spropMaxDonDiffSet), out donlField);
+                
+                if (spropMaxDonDiffValue)
+                    if (donlField > 0)
+                        h265CodecInfo.HasDonlField = true;
+            }
+
+            /* sprop-depack-buf-nalus: 0-32767 */
+            string spropDepackBufNalusSet = formatAttributes.FirstOrDefault(fa =>
+              fa.StartsWith("sprop-depack-buf-nalus", StringComparison.InvariantCultureIgnoreCase));
+            
+            if (spropDepackBufNalusSet != null)
+            {
+                int depackBufNalus;
+                bool spropDepackBufNalusValue = int.TryParse(GetFormatParameterValue(spropDepackBufNalusSet), out depackBufNalus);
+
+                if (spropDepackBufNalusValue)
+                    if (depackBufNalus > 0)
+                        h265CodecInfo.HasDonlField = true;
             }
         }
 

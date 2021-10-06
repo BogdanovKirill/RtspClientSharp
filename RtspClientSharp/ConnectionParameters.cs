@@ -23,8 +23,7 @@ namespace RtspClientSharp
 
         public NetworkCredential Credentials { get; }
         public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
-        //public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(10);
-        public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(10);        
         public TimeSpan CancelTimeout { get; set; } = TimeSpan.FromSeconds(5);
         public string UserAgent { get; set; } = DefaultUserAgent;
         public RtpTransportProtocol RtpTransport { get; set; } = RtpTransportProtocol.TCP;

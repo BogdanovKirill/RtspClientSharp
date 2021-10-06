@@ -22,7 +22,7 @@ namespace SimpleRtspPlayer.GUI.ViewModels
         public LoggerWindowViewModel loggerViewModel;
 
         //public string DeviceAddress { get; set; } = "rtsp://184.72.239.149/vod/mp4:BigBuckBunny_115k.mov"; //Remove this comment before commit to the remote branch
-        public string DeviceAddress { get; set; } = "rtsp://10.48.7.81:554/cam/playback?channel=2&starttime=2021_08_18_14_07_30";
+        public string DeviceAddress { get; set; } = "rtsp://10.48.7.81:554/cam/playback?channel=2&starttime=2021_09_18_14_07_30";
 
         public string Login { get; set; } = "admin";
         //public string Password { get; set; } = "123456"; //Remove this comment before commit to the remote branch

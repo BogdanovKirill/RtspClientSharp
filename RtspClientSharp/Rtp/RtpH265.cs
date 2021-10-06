@@ -64,6 +64,13 @@ namespace RtspClientSharp.Rtp
         #endregion
     }
 
+    public enum HevcFrameType
+    {
+        Unknown,
+        IntraFrame,
+        PredictionFrame
+    }
+
     public enum SliceType
     {
         Undefined = -1,

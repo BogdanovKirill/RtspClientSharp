@@ -1,4 +1,5 @@
 ﻿using System;
+using Logger;
 using RtspClientSharp.MediaParsers;
 
 namespace RtspClientSharp.Rtp

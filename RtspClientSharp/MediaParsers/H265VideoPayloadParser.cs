@@ -6,7 +6,6 @@ using RtspClientSharp.Utils;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 
 namespace RtspClientSharp.MediaParsers
 {
@@ -18,62 +17,49 @@ namespace RtspClientSharp.MediaParsers
         private bool _usingDonlField;
         private TimeSpan _timeOffset = TimeSpan.MinValue;
 
+        //private int _receivedFuCount;
+
         public H265VideoPayloadParser(H265CodecInfo codecInfo)
         {
             ValidateCodecInfo(codecInfo);
 
-            _h265Parser = new H265Parser { FrameGenerated = OnFrameGenerated };
+            _h265Parser = new H265Parser(() => GetFrameTimestamp(_timeOffset)) { FrameGenerated = OnFrameGenerated };
 
             _usingDonlField = codecInfo.HasDonlField;
-            _h265Parser.SetUsingDonlField(_usingDonlField);
 
             CheckBytesLength(codecInfo);
 
             _nalStream = new MemoryStream(8 * 1024);
+
+            //_receivedFuCount = 0;
         }
 
         public override void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit)
         {
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
-            //if(!markerBit && timeOffset != _timeOffset)
+            if (!markerBit && timeOffset != _timeOffset)
+                _h265Parser.TryGetFrameBytes();
 
             _timeOffset = timeOffset;
 
-            /*    
-              0                   1                   2                   3
-             0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            |V=2|P|X|  CC   |M|     PT      |       sequence number         |
-            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            |                           timestamp                           |
-            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            |           synchronization source (SSRC) identifier            |
-            +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-            |            contributing source (CSRC) identifiers             |
-            |                             ....                              |
-            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    
-
-            */
             int nalUnit = (byteSegment.Array[byteSegment.Offset] >> 1) & 0x3F;
 
             if (!RtpH265TypeUtils.CheckIfIsValid(nalUnit))
                 throw new H265ParserException($"Invalid Nal unit type { nalUnit }");
 
-            RtpH265NALUType packMode = (RtpH265NALUType)nalUnit;
+            RtpH265NALUType nalUnitType = (RtpH265NALUType)nalUnit;
 
-            switch (packMode)
+            switch (nalUnitType)
             {
-                /*  supplemental enhancement information (SEI) */
-                case RtpH265NALUType.PREFIX_SEI_NUT:
-                    break;
                 /* aggregated packet (AP) - with two or more NAL units */
                 case RtpH265NALUType.RTPHEVC_AP:
-                    DecodeAP(byteSegment, true);
+                    ParseAP(byteSegment, markerBit);
                     break;
                 /* fragmentation unit (FU) */
                 case RtpH265NALUType.RTPHEVC_FP:
-                    DecodeFP(byteSegment, true);
+                    //_receivedFuCount++;
+                    ParseFP(byteSegment, markerBit);
                     break;
                 default:
                     _h265Parser.Parse(byteSegment, markerBit);
@@ -104,33 +90,36 @@ namespace RtspClientSharp.MediaParsers
         {
             if (codecInfo.VpsBytes.Length != 0)
                 _h265Parser.Parse(new ArraySegment<byte>(codecInfo.VpsBytes), false);
+
             if (codecInfo.SpsBytes.Length != 0)
                 _h265Parser.Parse(new ArraySegment<byte>(codecInfo.SpsBytes), false);
+
             if (codecInfo.PpsBytes.Length != 0)
                 _h265Parser.Parse(new ArraySegment<byte>(codecInfo.PpsBytes), false);
         }
 
-        private void DecodeAP(ArraySegment<byte> byteSegment, bool markerBit)
+        private void ParseAP(ArraySegment<byte> byteSegment, bool markerBit)
         {
             Debug.WriteLine("Aggregation packet");
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
 
-            int startOffset = byteSegment.Offset;
-            int endOffset = byteSegment.Offset + byteSegment.Count;
+            /* pass the HEVC payload header */
+            int offset = byteSegment.Offset + RtpH265TypeUtils.RtpHevcPayloadHeaderSize;
 
-            startOffset += 2;
+            /* pass the HEVC DONL field */
+            if (_usingDonlField)
+                offset += RtpH265TypeUtils.RtpHevcDonlFieldSize;
 
-            while (startOffset < (byteSegment.Count - 1))
+            while (offset < (byteSegment.Count - 1))
             {
 
             }
         }
 
-        private void DecodeFP(ArraySegment<byte> byteSegment, bool markerBit)
+        private void ParseFP(ArraySegment<byte> byteSegment, bool markerBit)
         {
             Debug.WriteLine("Fragmentation Unit");
             Debug.Assert(byteSegment.Array != null, "byteSegment.Array != null");
-
 
             /*
             *    decode the FU header
@@ -154,7 +143,7 @@ namespace RtspClientSharp.MediaParsers
 
             // Start bit and End bit must not both be set to 1 in the same FU header
             if (startMarker && endMarker)
-                throw new H264ParserException($"Illegal combination of S and E bit in RTP/HEVC packet");
+                throw new H265ParserException($"Illegal combination of S and E bit in RTP/HEVC packet");
 
             // Pass the HEVC FU header
             offset += RtpH265TypeUtils.RtpHevcFuHeaderSize;
@@ -162,14 +151,14 @@ namespace RtspClientSharp.MediaParsers
             // Pass the HEVC DONL Field 
             if (_usingDonlField)
                 offset += RtpH265TypeUtils.RtpHevcDonlFieldSize;
-
+            
             if (startMarker)
             {
                 // Start of Fragment.
-                int[] newNalHeader = new int[2];
+                byte[] newNalHeader = new byte[2];
 
                 // Reconstrut the NAL header from the rtp payload header, replacing the Type with FU Type           
-                newNalHeader[0] = (byteSegment.Array[byteSegment.Offset] & 0x81) | (fuType << 1);
+                newNalHeader[0] = Convert.ToByte((byteSegment.Array[byteSegment.Offset] & 0x81) | (fuType << 1));
                 newNalHeader[1] = byteSegment.Array[byteSegment.Offset + 1];
 
                 offset += newNalHeader.Length;
@@ -180,11 +169,11 @@ namespace RtspClientSharp.MediaParsers
                     RawH265Frame.StartMarker))
                     _nalStream.Write(H265Parser.StartMarkSegment.Array, H265Parser.StartMarkSegment.Offset, H265Parser.StartMarkSegment.Count);
 
-                _nalStream.WriteByte((byte)newNalHeader[0]);
-                _nalStream.WriteByte((byte)newNalHeader[1]);
+                _nalStream.WriteByte(newNalHeader[0]);
+                _nalStream.WriteByte(newNalHeader[1]);
 
                 _nalStream.Write(nalUnitSegment.Array, nalUnitSegment.Offset, nalUnitSegment.Count);
-                
+
                 _waitForStartFu = false;
 
                 return;
@@ -193,8 +182,8 @@ namespace RtspClientSharp.MediaParsers
             if (_waitForStartFu)
                 return;
 
-            _nalStream.Write(byteSegment.Array, byteSegment.Offset, byteSegment.Offset + byteSegment.Count - offset);
-           
+            _nalStream.Write(byteSegment.Array, offset, byteSegment.Offset + byteSegment.Count - offset);
+
             if (endMarker)
             {
                 // End part of Fragment               

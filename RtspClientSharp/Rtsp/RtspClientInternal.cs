@@ -104,6 +104,7 @@ namespace RtspClientSharp.Rtsp
             if (!anyTrackRequested)
                 throw new RtspClientException("Any suitable track is not found");
 
+            // TODO: Seems like some timestamps are being returned with 2 different timezones and/or some difference between the requested datetime and the returned one.
             RtspRequestMessage playRequest = (initialTimeStamp != default(DateTime) ? _requestMessageFactory.CreatePlayRequest(initialTimeStamp) : _requestMessageFactory.CreatePlayRequest());
             RtspResponseMessage playResponse = 
             await _rtspTransportClient.EnsureExecuteRequest(playRequest, token, 1);

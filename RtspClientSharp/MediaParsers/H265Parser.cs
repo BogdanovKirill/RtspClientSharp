@@ -1,10 +1,12 @@
-﻿using RtspClientSharp.RawFrames;
+﻿using Logger;
+using RtspClientSharp.RawFrames;
 using RtspClientSharp.RawFrames.Video;
 using RtspClientSharp.Rtp;
 using RtspClientSharp.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace RtspClientSharp.MediaParsers
@@ -18,11 +20,21 @@ namespace RtspClientSharp.MediaParsers
         private readonly Dictionary<int, byte[]> _vpsMap = new Dictionary<int, byte[]>();
         private readonly Dictionary<int, byte[]> _spsMap = new Dictionary<int, byte[]>();
         private readonly Dictionary<int, byte[]> _ppsMap = new Dictionary<int, byte[]>();
+        private readonly Dictionary<int, byte[]> _seiMap = new Dictionary<int, byte[]>();
         private byte[] _parametersBytes = new byte[0];
+        private bool _waitForIFrame = true;
         private bool _updatedParametersBytes;
-        private bool _usingDonlField;
+        private int _sliceType = -1;
+
+        private readonly MemoryStream _frameStream;
 
         public Action<RawFrame> FrameGenerated;
+
+        public H265Parser(Func<DateTime> frameTimestampProvider)
+        {
+            _frameTimestampProvider = frameTimestampProvider ?? throw new ArgumentException(nameof(frameTimestampProvider));
+            _frameStream = new MemoryStream(8 * 1024);
+        }
 
         public void Parse(ArraySegment<byte> byteSegment, bool generateFrame)
         {
@@ -33,14 +45,65 @@ namespace RtspClientSharp.MediaParsers
                 H265Slicer.Slice(byteSegment, SliceOnNalUnitFound);
             else
                 ProcessNalUnit(byteSegment, false, ref generateFrame);
+
+            if (generateFrame)
+                TryGetFrameBytes();
         }
 
-        public void SetUsingDonlField(bool usingDonlField)
-            => _usingDonlField = usingDonlField;
+        public void TryGetFrameBytes()
+        {
+            if (_frameStream.Position == 0)
+                return;
+
+            var frameBytes = new ArraySegment<byte>(_frameStream.GetBuffer(), 0, (int)_frameStream.Position);
+            _frameStream.Position = 0;
+            TryGenerateFrame(frameBytes);
+        }
+
+        private void TryGenerateFrame(ArraySegment<byte> frameBytes)
+        {
+            if (_updatedParametersBytes)
+            {
+                UpdateParametersBytes();
+                _updatedParametersBytes = false;
+            }
+
+            if (_sliceType == -1 || _parametersBytes.Length == 0)
+                return;
+
+            HevcFrameType frameType = GetFrameType(_sliceType);
+            //PlayerLogger.fLogMethod($"TryGenerateFrame frameType { frameType }");
+            //PlayerLogger.fLogMethod($"TryGenerateFrame frameBytesCount { frameBytes.Count }");
+
+            if (frameType == HevcFrameType.Unknown)
+            {
+                //PlayerLogger.fLogMethod($"Unknown frame sliceType { _sliceType }");
+            }
+
+            _sliceType = -1;
+            DateTime frameTimestamp;
+
+            if (frameType == HevcFrameType.PredictionFrame && !_waitForIFrame)
+            {
+                frameTimestamp = _frameTimestampProvider();
+                FrameGenerated?.Invoke(new RawH265PFrame(frameTimestamp, frameBytes));
+                return;
+            }
+
+            if (frameType != HevcFrameType.IntraFrame)
+                return;
+
+            _waitForIFrame = false;
+            var parametersBytesSegment = new ArraySegment<byte>(_parametersBytes);
+
+            frameTimestamp = _frameTimestampProvider();
+            FrameGenerated?.Invoke(new RawH265IFrame(frameTimestamp, frameBytes, parametersBytesSegment));
+        }
 
         public void ResetState()
         {
-            throw new NotImplementedException();
+            _frameStream.Position = 0;
+            _sliceType = -1;
         }
 
         private void SliceOnNalUnitFound(ArraySegment<byte> byteSegment)
@@ -91,53 +154,53 @@ namespace RtspClientSharp.MediaParsers
             if (!RtpH265TypeUtils.CheckIfIsValid(nalUnitType))
                 throw new H265ParserException($"Invalid (HEVC) NAL Unit Type { nalUnitType }.");
 
-            if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.VPS_NUT)
+            switch ((RtpH265NALUType)nalUnitType)
             {
-                ParseVps(byteSegment, hasStartMarker);
-                return;
+                /* Video parameter set */
+                case RtpH265NALUType.VPS_NUT:
+                    ProcessParameters(byteSegment, hasStartMarker, 0, _vpsMap);
+                    return;
+                /* Sequence parameter set */
+                case RtpH265NALUType.SPS_NUT:
+                    ProcessParameters(byteSegment, hasStartMarker, 0, _spsMap);
+                    return;
+                /* Picture parameter set */
+                case RtpH265NALUType.PPS_NUT:
+                    ProcessParameters(byteSegment, hasStartMarker, 0, _ppsMap);
+                    return;
+                /* Supplemental enhancement information (SEI)*/
+                case RtpH265NALUType.PREFIX_SEI_NUT:
+                    ProcessParameters(byteSegment, hasStartMarker, 0, _seiMap);
+                    return;
+                default:
+                    break;
             }
 
-            if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.SPS_NUT)
+            if (_sliceType == -1 && ((RtpH265NALUType)nalUnitType == RtpH265NALUType.TRAIL_R || (RtpH265NALUType)nalUnitType == RtpH265NALUType.IDR_W_RADL))
+                _sliceType = GetSliceType(byteSegment, hasStartMarker);
+
+            if (generateFrame && (hasStartMarker || byteSegment.Offset >= StartMarkSegment.Count) && _frameStream.Position == 0)
             {
-                ParseSps(byteSegment, hasStartMarker);
-                return;
-            }
+                if (!hasStartMarker)
+                {
+                    int newOffset = byteSegment.Offset - StartMarkSegment.Count;
 
-            if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.PPS_NUT)
+                    Buffer.BlockCopy(StartMarkSegment.Array, StartMarkSegment.Offset,
+                        byteSegment.Array, newOffset, StartMarkSegment.Count);
+
+                    byteSegment = new ArraySegment<byte>(byteSegment.Array, newOffset, byteSegment.Count + StartMarkSegment.Count);
+                }
+
+                generateFrame = false;
+                TryGenerateFrame(byteSegment);
+            }
+            else
             {
-                ParsePps(byteSegment, hasStartMarker);
-                return;
+                if (!hasStartMarker)
+                    _frameStream.Write(StartMarkSegment.Array, StartMarkSegment.Offset, StartMarkSegment.Count);
+
+                _frameStream.Write(byteSegment.Array, byteSegment.Offset, byteSegment.Count);
             }
-        }
-
-        private void ParseVps(ArraySegment<byte> byteSegment, bool hasStartMarker)
-        {
-            const int vpsOffset = 1;
-
-            if (byteSegment.Count < vpsOffset)
-                return;
-
-            ProcessParameters(byteSegment, hasStartMarker, vpsOffset - 1, _vpsMap);
-        }
-
-        private void ParseSps(ArraySegment<byte> byteSegment, bool hasStartMarker)
-        {
-            const int spsOffset = 1;
-
-            if (byteSegment.Count < spsOffset)
-                return;
-
-            ProcessParameters(byteSegment, hasStartMarker, spsOffset - 1, _spsMap);
-        }
-
-        private void ParsePps(ArraySegment<byte> byteSegment, bool hasStartMarker)
-        {
-            const int ppsOffset = 1;
-
-            if (byteSegment.Count < ppsOffset)
-                return;
-
-            ProcessParameters(byteSegment, hasStartMarker, ppsOffset - 1, _ppsMap);
         }
 
         private void ProcessParameters(ArraySegment<byte> byteSegment, bool hasStartMarker, int offset,
@@ -157,6 +220,7 @@ namespace RtspClientSharp.MediaParsers
 
             if (TryUpdateParameters(byteSegment, id, idToBytesMap))
                 _updatedParametersBytes = true;
+
         }
 
         private static bool TryUpdateParameters(ArraySegment<byte> byteSegment, int id,
@@ -189,8 +253,9 @@ namespace RtspClientSharp.MediaParsers
         private void UpdateParametersBytes()
         {
             int totalSize = _vpsMap.Values.Sum(vps => vps.Length) + _spsMap.Values.Sum(sps => sps.Length) +
-                _ppsMap.Values.Sum(pps => pps.Length) + RawH265Frame.StartMarkerSize *
-                (_vpsMap.Count + _spsMap.Count + _ppsMap.Count);
+                _ppsMap.Values.Sum(pps => pps.Length) + _seiMap.Values.Sum(sei => sei.Length) +
+                RawH265Frame.StartMarkerSize *
+                (_vpsMap.Count + _spsMap.Count + _ppsMap.Count + _seiMap.Count);
 
             if (_parametersBytes.Length != totalSize)
                 _parametersBytes = new byte[totalSize];
@@ -199,12 +264,13 @@ namespace RtspClientSharp.MediaParsers
 
             CopyToParametersBytes(_vpsMap.Values, ref offset);
             CopyToParametersBytes(_spsMap.Values, ref offset);
-            CopyToParametersBytes(_ppsMap.Values, ref offset);            
+            CopyToParametersBytes(_ppsMap.Values, ref offset);
+            CopyToParametersBytes(_seiMap.Values, ref offset);
         }
 
         private void CopyToParametersBytes(Dictionary<int, byte[]>.ValueCollection idToBytesMap, ref int offset)
         {
-            foreach(byte[] param in idToBytesMap)
+            foreach (byte[] param in idToBytesMap)
             {
                 Buffer.BlockCopy(RawH265Frame.StartMarker, 0, _parametersBytes, offset, RawH265Frame.StartMarkerSize);
                 offset += RawH265Frame.StartMarkerSize;
@@ -224,11 +290,31 @@ namespace RtspClientSharp.MediaParsers
 
             int firstMbInSlice = _bitStreamReader.ReadUe();
 
-            if (firstMbInSlice == (int)SliceType.Undefined)
+            if (firstMbInSlice == -1)
                 return firstMbInSlice;
 
             int nalSliceType = _bitStreamReader.ReadUe();
             return nalSliceType;
+        }
+
+        private static HevcFrameType GetFrameTypeFromNalUnitType(int nalUnitType)
+        {
+            if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.IDR_W_RADL)
+                return HevcFrameType.IntraFrame;
+            if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.TRAIL_R)
+                return HevcFrameType.PredictionFrame;
+
+            return HevcFrameType.Unknown;
+        }
+
+        private static HevcFrameType GetFrameType(int sliceType)
+        {
+            if (sliceType == 0 || sliceType == 5)
+                return HevcFrameType.PredictionFrame;
+            if (sliceType == 1 || sliceType == 2 || sliceType == 14)
+                return HevcFrameType.IntraFrame;
+
+            return HevcFrameType.Unknown;
         }
     }
 }
