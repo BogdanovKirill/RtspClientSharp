@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace RtspClientSharp.MediaParsers
 {
-    class H265Parser
+    public class H265Parser
     {
         public static readonly ArraySegment<byte> StartMarkSegment = new ArraySegment<byte>(RawH265Frame.StartMarker);
 
@@ -71,10 +71,9 @@ namespace RtspClientSharp.MediaParsers
             if (_sliceType == -1 || _parametersBytes.Length == 0)
                 return;
 
-            HevcFrameType frameType = GetFrameType(_sliceType);
-            //PlayerLogger.fLogMethod($"TryGenerateFrame frameType { frameType }");
-            //PlayerLogger.fLogMethod($"TryGenerateFrame frameBytesCount { frameBytes.Count }");
+            HevcFrameType frameType = GetFrameTypeFromNal((RtpH265NALUType)_sliceType);
 
+            PlayerLogger.fLogMethod($"frameType { frameType }");
             if (frameType == HevcFrameType.Unknown)
             {
                 //PlayerLogger.fLogMethod($"Unknown frame sliceType { _sliceType }");
@@ -177,7 +176,8 @@ namespace RtspClientSharp.MediaParsers
             }
 
             if (_sliceType == -1 && ((RtpH265NALUType)nalUnitType == RtpH265NALUType.TRAIL_R || (RtpH265NALUType)nalUnitType == RtpH265NALUType.IDR_W_RADL))
-                _sliceType = GetSliceType(byteSegment, hasStartMarker);
+                _sliceType = nalUnitType;
+                //_sliceType = GetSliceType(byteSegment, hasStartMarker);
 
             if (generateFrame && (hasStartMarker || byteSegment.Offset >= StartMarkSegment.Count) && _frameStream.Position == 0)
             {
@@ -279,42 +279,42 @@ namespace RtspClientSharp.MediaParsers
             }
         }
 
-        private int GetSliceType(ArraySegment<byte> byteSegment, bool hasStartMarker)
+        //private int GetSliceType(ArraySegment<byte> byteSegment, bool hasStartMarker)
+        //{
+        //    int offset = 0;
+
+        //    if (hasStartMarker)
+        //        offset += RawH265Frame.StartMarkerSize;
+
+        //    _bitStreamReader.ReInitialize(byteSegment.SubSegment(offset));
+
+        //    int firstMbInSlice = _bitStreamReader.ReadUe();
+
+        //    if (firstMbInSlice == -1)
+        //        return firstMbInSlice;
+
+        //    int nalSliceType = _bitStreamReader.ReadUe();
+        //    return nalSliceType;
+        //}
+
+        private static HevcFrameType GetFrameTypeFromNal(RtpH265NALUType nalType)
         {
-            int offset = 1;
-
-            if (hasStartMarker)
-                offset += RawH265Frame.StartMarkerSize;
-
-            _bitStreamReader.ReInitialize(byteSegment.SubSegment(offset));
-
-            int firstMbInSlice = _bitStreamReader.ReadUe();
-
-            if (firstMbInSlice == -1)
-                return firstMbInSlice;
-
-            int nalSliceType = _bitStreamReader.ReadUe();
-            return nalSliceType;
-        }
-
-        private static HevcFrameType GetFrameTypeFromNalUnitType(int nalUnitType)
-        {
-            if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.IDR_W_RADL)
+            if (nalType == RtpH265NALUType.IDR_W_RADL)
                 return HevcFrameType.IntraFrame;
-            if ((RtpH265NALUType)nalUnitType == RtpH265NALUType.TRAIL_R)
+            if (nalType == RtpH265NALUType.TRAIL_R)
                 return HevcFrameType.PredictionFrame;
 
             return HevcFrameType.Unknown;
         }
 
-        private static HevcFrameType GetFrameType(int sliceType)
-        {
-            if (sliceType == 0 || sliceType == 5)
-                return HevcFrameType.PredictionFrame;
-            if (sliceType == 1 || sliceType == 2 || sliceType == 14)
-                return HevcFrameType.IntraFrame;
+        //private static HevcFrameType GetFrameType(int sliceType)
+        //{
+        //    if (sliceType == 0 || sliceType == 5)
+        //        return HevcFrameType.PredictionFrame;
+        //    if (sliceType == 1 || sliceType == 2 || sliceType == 14)
+        //        return HevcFrameType.IntraFrame;
 
-            return HevcFrameType.Unknown;
-        }
+        //    return HevcFrameType.Unknown;
+        //}
     }
 }

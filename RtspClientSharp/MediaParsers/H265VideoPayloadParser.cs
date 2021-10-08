@@ -17,8 +17,6 @@ namespace RtspClientSharp.MediaParsers
         private bool _usingDonlField;
         private TimeSpan _timeOffset = TimeSpan.MinValue;
 
-        //private int _receivedFuCount;
-
         public H265VideoPayloadParser(H265CodecInfo codecInfo)
         {
             ValidateCodecInfo(codecInfo);
@@ -30,8 +28,6 @@ namespace RtspClientSharp.MediaParsers
             CheckBytesLength(codecInfo);
 
             _nalStream = new MemoryStream(8 * 1024);
-
-            //_receivedFuCount = 0;
         }
 
         public override void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit)
@@ -58,7 +54,6 @@ namespace RtspClientSharp.MediaParsers
                     break;
                 /* fragmentation unit (FU) */
                 case RtpH265NALUType.RTPHEVC_FP:
-                    //_receivedFuCount++;
                     ParseFP(byteSegment, markerBit);
                     break;
                 default:
@@ -151,7 +146,7 @@ namespace RtspClientSharp.MediaParsers
             // Pass the HEVC DONL Field 
             if (_usingDonlField)
                 offset += RtpH265TypeUtils.RtpHevcDonlFieldSize;
-            
+
             if (startMarker)
             {
                 // Start of Fragment.
@@ -161,9 +156,7 @@ namespace RtspClientSharp.MediaParsers
                 newNalHeader[0] = Convert.ToByte((byteSegment.Array[byteSegment.Offset] & 0x81) | (fuType << 1));
                 newNalHeader[1] = byteSegment.Array[byteSegment.Offset + 1];
 
-                offset += newNalHeader.Length;
-
-                var nalUnitSegment = new ArraySegment<byte>(byteSegment.Array, offset, byteSegment.Offset + byteSegment.Count - offset);
+                var nalUnitSegment = new ArraySegment<byte>(byteSegment.Array, offset, byteSegment.Count - offset);
 
                 if (!ArrayUtils.StartsWith(nalUnitSegment.Array, nalUnitSegment.Offset, nalUnitSegment.Count,
                     RawH265Frame.StartMarker))
@@ -182,7 +175,7 @@ namespace RtspClientSharp.MediaParsers
             if (_waitForStartFu)
                 return;
 
-            _nalStream.Write(byteSegment.Array, offset, byteSegment.Offset + byteSegment.Count - offset);
+            _nalStream.Write(byteSegment.Array, offset, byteSegment.Count - offset);
 
             if (endMarker)
             {

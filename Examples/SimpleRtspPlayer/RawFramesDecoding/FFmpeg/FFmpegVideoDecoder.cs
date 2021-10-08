@@ -102,10 +102,9 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                     rawVideoFrame.FrameSegment.Count,
                     out int width, out int height, out FFmpegPixelFormat pixelFormat);
 
-                if (/*resultCode*/ -1 != 0)
-                    throw new DecoderException($"width { width } height { height } pixelFormat { pixelFormat }");
-                //throw new DecoderException(
-                //    $"An error occurred while trying to decode the frames, { _videoCodecId } codec, code: { resultCode }");
+                if (resultCode != 0)
+                    throw new DecoderException(
+                        $"An error occurred while trying to decode the frames, { _videoCodecId } codec, code: { resultCode }");
 
 
                 if (_currentFrameParameters.Width != width || _currentFrameParameters.Height != height ||

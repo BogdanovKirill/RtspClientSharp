@@ -1,16 +1,24 @@
 #include "stdafx.h"
 
+static void (*log_method)(char*) = NULL;
+
+void set_log_method(void (*lm)(char*))
+{
+	log_method = lm;
+}
+
 struct VideoDecoderContext
 {
 	AVCodec *codec;
 	AVCodecContext *av_codec_context;
 	AVPacket av_raw_packet;
+	AVPacket av_pkt;
 	AVFrame *frame;
 };
 
 struct ScalerContext
 {
-	SwsContext *sws_context;
+	SwsContext* sws_context;
 	int source_left;
 	int source_top;
 	int source_height;
@@ -18,6 +26,12 @@ struct ScalerContext
 	int scaled_width;
 	int scaled_height;
 	AVPixelFormat scaled_pixel_format;
+};
+
+struct CustomBuffer
+{
+	uint8_t* buf;
+	int size;
 };
 
 int create_video_decoder(int codec_id, void **handle)
@@ -60,6 +74,7 @@ int create_video_decoder(int codec_id, void **handle)
 	av_init_packet(&context->av_raw_packet);
 
 	*handle = context;
+
 	return 0;
 }
 
@@ -114,6 +129,122 @@ int decode_video_frame(void *handle, void *rawBuffer, int rawBufferLength, int *
 
 	if (len != rawBufferLength)
 		return -3;
+
+	if (got_frame)
+	{
+		*frameWidth = context->av_codec_context->width;
+		*frameHeight = context->av_codec_context->height;
+		*framePixelFormat = context->av_codec_context->pix_fmt;
+		return 0;
+	}
+
+	return -4;
+}
+
+int __cdecl read_packet(void* opaque, uint8_t* buff, int buff_size)
+{
+	int return_size = 0;
+	CustomBuffer* c_buf = static_cast<CustomBuffer*>(opaque);
+	
+	char log_buff[4096] = { 0 };
+
+	if (log_method != NULL)
+	{
+		snprintf(log_buff, 4096, "before memcpy\n");
+		log_method(log_buff);
+	}
+
+
+	memcpy(buff, c_buf->buf, 4096);
+	
+	if (c_buf->size > 4096)
+	{
+		c_buf->buf = c_buf->buf + 4096;
+		c_buf->size = buff_size - 4096;
+		return_size = 4096;
+	}
+	else
+	{
+		c_buf->buf = c_buf->buf + buff_size;
+		c_buf->size = 0;
+		return_size = c_buf->size;
+	}
+	
+	return return_size;
+}
+//
+//int __cdecl read_packet(void* opaque, uint8_t* buff, int buff_size)
+//{
+//	memcpy(buff, opaque, buff_size);
+//	return buff_size;
+//}
+
+int decode_video_frame_2(void* handle, void* rawBuffer, int rawBufferLength, int* frameWidth, int* frameHeight, int* framePixelFormat)
+{
+#if _DEBUG
+	if (!handle || !rawBuffer || !rawBufferLength || !frameWidth || !frameHeight || !framePixelFormat)
+		return -1;
+
+	if (reinterpret_cast<uintptr_t>(rawBuffer) % 4 != 0)
+		return -2;
+#endif
+
+	auto context = static_cast<VideoDecoderContext*>(handle);
+	int got_frame = (int)malloc(sizeof(int) * 4);
+
+	context->av_raw_packet.data = static_cast<uint8_t*>(rawBuffer);
+	context->av_raw_packet.size = rawBufferLength;
+	
+	CustomBuffer* c_buf = new CustomBuffer;
+	c_buf->buf = static_cast<uint8_t*>(rawBuffer);
+	c_buf->size = rawBufferLength;
+
+	AVFormatContext* format_context = avformat_alloc_context();
+	void* buffer = av_malloc(rawBufferLength + AV_INPUT_BUFFER_PADDING_SIZE);
+
+	AVIOContext* io_context = avio_alloc_context((unsigned char*)buffer, context->av_raw_packet.size, 0, c_buf, &read_packet, NULL, NULL);
+	format_context->pb = io_context;
+
+	auto input_format = av_find_input_format(context->av_codec_context->codec->name);
+
+	avformat_open_input(&format_context, "", input_format, NULL);
+
+	if (format_context->iformat->raw_codec_id == 0)
+		return -9;
+
+	format_context->pb->eof_reached = 0;
+
+	memset(&(context->av_pkt), 0, sizeof(AVPacket));
+
+	if (context->av_pkt.data != NULL)
+		av_free_packet(&(context->av_pkt));
+
+	int frame_result = av_read_frame(format_context, &(context->av_pkt));
+
+	char log_buff[4096] = { 0 };
+
+	if (log_method != NULL)
+	{
+		snprintf(log_buff, 4096, "av_pkt.size: %d\nav_pkt.stream_index: %d\n", context->av_pkt.size, context->av_pkt.stream_index);
+		log_method(log_buff);
+	}
+
+	if (frame_result < 0)
+		return -7;
+
+	const int len = avcodec_decode_video2(context->av_codec_context, context->frame, &got_frame, &(context->av_pkt));
+
+	char log_frame[450] = { 0 };
+
+	if (log_method != NULL)
+	{
+		snprintf(log_frame, sizeof(log_frame), "frame.pkt_size: %d", context->frame->pkt_size);
+		log_method(log_frame);
+	}
+
+
+	if (len != rawBufferLength)
+		return len;
 
 	if (got_frame)
 	{
