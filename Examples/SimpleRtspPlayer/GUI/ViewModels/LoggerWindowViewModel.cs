@@ -1,7 +1,6 @@
 ﻿using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
 using Logger;
-using SimpleRtspPlayer.RawFramesDecoding.FFmpeg;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -27,16 +26,14 @@ namespace SimpleRtspPlayer.GUI.ViewModels
         {
             PlayerLogger.fLogMethod = (s) => OnLogUpdated(s);
             logDelegate = new LogDelegate(PlayerLogger.LogDllOutput);
-            
-            FFmpegVideoPInvoke.SetLogMethod(Marshal.GetFunctionPointerForDelegate(logDelegate));
-
+                       
             SaveLogToFileCommand = new RelayCommand(OnSaveLogToFile, () => _canExecute);
             ClearLogCommand = new RelayCommand(OnClearLog, () => _canExecute);
         }
 
         private void OnSaveLogToFile()
         {
-            var path = $@"C:\Users\Otavio\Desktop\PlayerLogs\Log.txt";
+            var path = $@"";
             var logToSave = SimpleRtspPlayer.GUI.Views.LoggerWindow.Instance.logTextBox.Text;
             var appendTextId = $"---------------  LogDate { DateTime.Now.Day }_{ DateTime.Now.Hour}_{ DateTime.Now.Minute}_{ DateTime.Now.Second} ---------------";
 

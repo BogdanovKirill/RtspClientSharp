@@ -11,16 +11,36 @@ namespace RtspClientSharp.UnitTests.MediaParsers
     public class H265VideoPayloadParserTests
     {
         [TestMethod]
-        [DataRow(new byte[] { 0x24, 0x00, 0x05, 0xAC, 0x80, 0x62, 0x91, 0x16, 0x00, 0x00, 0x91, 0x12, 0x36, 0x63, 0x91 }, DisplayName = "FP")]
-        //[DataRow(new byte[] { }, DisplayName = "AP")]
-        public void Parse_DifferentUnits_ReturnsValidIFrame(byte[] testBytes)
+        public void Parse_FragmentationUnit_ReturnsValidIFrame()
         {
             H265CodecInfo testCodecInfo = CreateTestH265CodecInfo();
+
+            var testBytesStartMark = new byte[] { 0x62, 0x01, 0x93, 0xAF, 0x8A, 0xB4, 0xB1, 0x0A, 0x80, 0xF3, 0xE3, 0x76, 0x74, 0xC2, 0xA3 };
+            var testBytesEndMark = new byte[] { 0x62, 0x01, 0x53, 0xF7, 0x7E, 0x59, 0xE1, 0x4D, 0x79, 0xBA, 0xF3, 0xDF, 0x4F, 0xE3 };
 
             RawH265Frame frame = null;
             var parser = new H265VideoPayloadParser(testCodecInfo);
             parser.FrameGenerated = rawFrame => frame = (RawH265Frame)rawFrame;
-            parser.Parse(TimeSpan.Zero, new ArraySegment<byte>(testBytes), true);
+            parser.Parse(TimeSpan.Zero, new ArraySegment<byte>(testBytesStartMark), true);
+            parser.Parse(TimeSpan.Zero, new ArraySegment<byte>(testBytesEndMark), true);
+
+            Assert.IsNotNull(frame);
+            Assert.IsInstanceOfType(frame, typeof(RawH265IFrame));
+        }
+
+        [TestMethod]
+        public void Parse_AggregationUnit_ReturnsValidIFrame()
+        {
+            H265CodecInfo testCodecInfo = CreateTestH265CodecInfo();
+
+            var testBytesFirstFrame = new byte[] { 0x61, 0x01, 0x93, 0xAF, 0x8A, 0xB4, 0xB1, 0x0A, 0x80, 0xF3, 0xE3, 0x76, 0x74, 0xC2, 0xA3 };
+            var testBytesSecondFrame = new byte[] { 0x61, 0x01, 0x53, 0xF7, 0x7E, 0x59, 0xE1, 0x4D, 0x79, 0xBA, 0xF3, 0xDF, 0x4F, 0xE3 };
+
+            RawH265Frame frame = null;
+            var parser = new H265VideoPayloadParser(testCodecInfo);
+            parser.FrameGenerated = rawFrame => frame = (RawH265Frame)rawFrame;
+            parser.Parse(TimeSpan.Zero, new ArraySegment<byte>(testBytesFirstFrame), true);
+            parser.Parse(TimeSpan.Zero, new ArraySegment<byte>(testBytesSecondFrame), true);
 
             Assert.IsNotNull(frame);
             Assert.IsInstanceOfType(frame, typeof(RawH265IFrame));

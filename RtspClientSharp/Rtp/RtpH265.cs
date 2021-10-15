@@ -86,6 +86,7 @@ namespace RtspClientSharp.Rtp
         public const int RtpHevcDonlFieldSize = 2;
         public const int RtpHevcDondFieldSize = 1;
         public const int RtpHevcApNaluLengthFieldSize = 2;
+        public const int RtpHevcNaluHeaderSize = 2;
         //7.4.2.1
         public const int MakxSubLayers = 7;
         public const int MaxVpsCount = 16;

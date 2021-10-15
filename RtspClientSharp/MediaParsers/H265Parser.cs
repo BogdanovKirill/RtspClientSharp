@@ -73,11 +73,8 @@ namespace RtspClientSharp.MediaParsers
 
             HevcFrameType frameType = GetFrameTypeFromNal((RtpH265NALUType)_sliceType);
 
-            PlayerLogger.fLogMethod($"frameType { frameType }");
             if (frameType == HevcFrameType.Unknown)
-            {
-                //PlayerLogger.fLogMethod($"Unknown frame sliceType { _sliceType }");
-            }
+                throw new H265ParserException("Unknown hevc frame type.");
 
             _sliceType = -1;
             DateTime frameTimestamp;
@@ -135,7 +132,7 @@ namespace RtspClientSharp.MediaParsers
 
             // forbidden_zero_bit must be 0
             if (!(byteSegment.Array[offset] >> 0x0F == 0))
-                throw new H265ParserException($"Forbidden zero bit's different than zero.");
+                throw new H265ParserException("Forbidden zero bit's different than zero.");
 
             int nalUnitType = (byteSegment.Array[offset] >> 1) & 0x3F;
             int layerId = ((byteSegment.Array[offset] << 5) & 0x20) | ((byteSegment.Array[offset + 1] >> 3) & 0x1F);
@@ -177,7 +174,6 @@ namespace RtspClientSharp.MediaParsers
 
             if (_sliceType == -1 && ((RtpH265NALUType)nalUnitType == RtpH265NALUType.TRAIL_R || (RtpH265NALUType)nalUnitType == RtpH265NALUType.IDR_W_RADL))
                 _sliceType = nalUnitType;
-                //_sliceType = GetSliceType(byteSegment, hasStartMarker);
 
             if (generateFrame && (hasStartMarker || byteSegment.Offset >= StartMarkSegment.Count) && _frameStream.Position == 0)
             {
@@ -220,7 +216,6 @@ namespace RtspClientSharp.MediaParsers
 
             if (TryUpdateParameters(byteSegment, id, idToBytesMap))
                 _updatedParametersBytes = true;
-
         }
 
         private static bool TryUpdateParameters(ArraySegment<byte> byteSegment, int id,
@@ -279,24 +274,6 @@ namespace RtspClientSharp.MediaParsers
             }
         }
 
-        //private int GetSliceType(ArraySegment<byte> byteSegment, bool hasStartMarker)
-        //{
-        //    int offset = 0;
-
-        //    if (hasStartMarker)
-        //        offset += RawH265Frame.StartMarkerSize;
-
-        //    _bitStreamReader.ReInitialize(byteSegment.SubSegment(offset));
-
-        //    int firstMbInSlice = _bitStreamReader.ReadUe();
-
-        //    if (firstMbInSlice == -1)
-        //        return firstMbInSlice;
-
-        //    int nalSliceType = _bitStreamReader.ReadUe();
-        //    return nalSliceType;
-        //}
-
         private static HevcFrameType GetFrameTypeFromNal(RtpH265NALUType nalType)
         {
             if (nalType == RtpH265NALUType.IDR_W_RADL)
@@ -306,15 +283,5 @@ namespace RtspClientSharp.MediaParsers
 
             return HevcFrameType.Unknown;
         }
-
-        //private static HevcFrameType GetFrameType(int sliceType)
-        //{
-        //    if (sliceType == 0 || sliceType == 5)
-        //        return HevcFrameType.PredictionFrame;
-        //    if (sliceType == 1 || sliceType == 2 || sliceType == 14)
-        //        return HevcFrameType.IntraFrame;
-
-        //    return HevcFrameType.Unknown;
-        //}
     }
 }

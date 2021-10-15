@@ -1,5 +1,4 @@
-﻿using Logger;
-using RtspClientSharp.Codecs.Video;
+﻿using RtspClientSharp.Codecs.Video;
 using RtspClientSharp.RawFrames.Video;
 using RtspClientSharp.Rtp;
 using RtspClientSharp.Utils;
@@ -105,9 +104,43 @@ namespace RtspClientSharp.MediaParsers
             if (_usingDonlField)
                 offset += RtpH265TypeUtils.RtpHevcDonlFieldSize;
 
-            while (offset < (byteSegment.Count - 1))
+            while (offset < byteSegment.Count)
             {
+                int nalUnitSize = BigEndianConverter.ReadUInt16(byteSegment.Array, byteSegment.Offset);
 
+                // consume the length of the aggregate
+                offset += RtpH265TypeUtils.RtpHevcApNaluLengthFieldSize;
+
+                if (nalUnitSize <= 0 || nalUnitSize > (byteSegment.Count - offset))
+                    return;
+
+                int nalUnitHeader = BigEndianConverter.ReadUInt16(byteSegment.Array, byteSegment.Offset);
+                offset += RtpH265TypeUtils.RtpHevcNaluHeaderSize;
+
+                // TODO: make a function out of this block (IsValidNaluHeader)
+                bool output = nalUnitHeader >> 15 == 0;
+                if (!output)
+                    return;
+
+                output = (nalUnitHeader & 0x1F8) >> 3 == 0;
+
+                if (!output)
+                    return;
+
+                output = (nalUnitHeader & 3) > 0;
+
+                if (!output)
+                    return;
+
+                if (!RtpH265TypeUtils.CheckIfIsValid(nalUnitHeader))
+                    throw new H265ParserException($"Invalid AP Nal unit type { nalUnitHeader }");
+
+                // Maybe validate if it is VCL or non-VCL
+                var newByteSegment = new ArraySegment<byte>(byteSegment.Array, offset, byteSegment.Offset + byteSegment.Count - offset);
+
+                _h265Parser.Parse(newByteSegment, true);
+
+                offset += nalUnitSize - RtpH265TypeUtils.RtpHevcNaluHeaderSize;
             }
         }
 
@@ -156,7 +189,7 @@ namespace RtspClientSharp.MediaParsers
                 newNalHeader[0] = Convert.ToByte((byteSegment.Array[byteSegment.Offset] & 0x81) | (fuType << 1));
                 newNalHeader[1] = byteSegment.Array[byteSegment.Offset + 1];
 
-                var nalUnitSegment = new ArraySegment<byte>(byteSegment.Array, offset, byteSegment.Count - offset);
+                var nalUnitSegment = new ArraySegment<byte>(byteSegment.Array, offset, byteSegment.Offset + byteSegment.Count - offset);
 
                 if (!ArrayUtils.StartsWith(nalUnitSegment.Array, nalUnitSegment.Offset, nalUnitSegment.Count,
                     RawH265Frame.StartMarker))
@@ -175,7 +208,7 @@ namespace RtspClientSharp.MediaParsers
             if (_waitForStartFu)
                 return;
 
-            _nalStream.Write(byteSegment.Array, offset, byteSegment.Count - offset);
+            _nalStream.Write(byteSegment.Array, offset, byteSegment.Offset + byteSegment.Count - offset);
 
             if (endMarker)
             {

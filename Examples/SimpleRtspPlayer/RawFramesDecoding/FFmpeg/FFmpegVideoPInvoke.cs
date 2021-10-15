@@ -48,10 +48,6 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
         public static extern int DecodeFrame(IntPtr handle, IntPtr rawBuffer, int rawBufferLength, out int frameWidth,
             out int frameHeight, out FFmpegPixelFormat framePixelFormat);
 
-        [DllImport(LibraryName, EntryPoint = "decode_video_frame_2", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int DecodeFrame2(IntPtr handle, IntPtr rawBuffer, int rawBufferLength, out int frameWidth,
-            out int frameHeight, out FFmpegPixelFormat framePixelFormat);
-
         [DllImport(LibraryName, EntryPoint = "custom_alloc", CallingConvention = CallingConvention.Cdecl)]
         public static unsafe extern void* Malloc(int buffer_size);
 
@@ -60,9 +56,6 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 
         [DllImport(LibraryName, EntryPoint = "custom_free", CallingConvention = CallingConvention.Cdecl)]
         public static extern void CustomFree(IntPtr buff);
-
-        [DllImport(LibraryName, EntryPoint = "set_log_method", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SetLogMethod(IntPtr data);
 
         [DllImport(LibraryName, EntryPoint = "scale_decoded_video_frame", CallingConvention = CallingConvention.Cdecl)]
         public static extern int ScaleDecodedVideoFrame(IntPtr handle, IntPtr scalerHandle, IntPtr scaledBuffer,

@@ -23,7 +23,6 @@ extern "C"
 	#include <libswscale/swscale.h>
 	#include <libavutil/samplefmt.h>
 	#include <libswresample/swresample.h>
-	#include <libavformat/avformat.h>
 }
 
 #include "export.h"
