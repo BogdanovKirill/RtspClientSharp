@@ -226,36 +226,6 @@ namespace RtspClientSharp.Sdp
                 ParseAACFormatAttributes(formatAttributes, aacCodecInfo);
         }
 
-        private static void ParseH265FormatAttributes(string[] formatAttributes, H265CodecInfo h265CodecInfo)
-        {
-            string spropSpsSet = formatAttributes.FirstOrDefault(fa =>
-                fa.StartsWith("sprop-sps", StringComparison.InvariantCultureIgnoreCase));
-
-            if (spropSpsSet != null)
-            {
-                string spropSpsSetValue = GetFormatParameterValue(spropSpsSet);
-                h265CodecInfo.SpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropSpsSetValue)).ToArray();
-            }
-
-            string spropPpsSet = formatAttributes.FirstOrDefault(fa =>
-                fa.StartsWith("sprop-pps", StringComparison.InvariantCultureIgnoreCase));
-
-            if (spropPpsSet != null)
-            {
-                string spropPpsSetValue = GetFormatParameterValue(spropPpsSet);
-                h265CodecInfo.PpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropPpsSetValue)).ToArray();
-            }
-
-            string spropVpsSet = formatAttributes.FirstOrDefault(fa =>
-                fa.StartsWith("sprop-vps", StringComparison.InvariantCultureIgnoreCase));
-
-            if (spropVpsSet != null)
-            {
-                string spropVpsSetValue = GetFormatParameterValue(spropVpsSet);
-                h265CodecInfo.VpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropVpsSetValue)).ToArray();
-            }
-        }
-
         private static void ParseH264FormatAttributes(string[] formatAttributes, H264CodecInfo h264CodecInfo)
         {
             string spropParametersSet = formatAttributes.FirstOrDefault(fa =>
