@@ -2,10 +2,12 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using RtspClientSharp.Codecs.Audio;
@@ -28,6 +30,8 @@ namespace RtspClientSharp.Rtsp
         private readonly ConnectionParameters _connectionParameters;
         private readonly Func<IRtspTransportClient> _transportClientProvider;
         private readonly RtspRequestMessageFactory _requestMessageFactory;
+
+        private IMediaPayloadParser _mediaPayloadParser;
 
         private readonly Dictionary<int, ITransportStream> _streamsMap = new Dictionary<int, ITransportStream>();
         private readonly ConcurrentDictionary<int, Socket> _udpClientsMap = new ConcurrentDictionary<int, Socket>();
@@ -62,6 +66,11 @@ namespace RtspClientSharp.Rtsp
 
         public async Task ConnectAsync(CancellationToken token)
         {
+            await ConnectAsync(default(DateTime), token);
+        }
+
+        public async Task ConnectAsync(DateTime initialTimeStamp, CancellationToken token)
+        {
             IRtspTransportClient rtspTransportClient = _transportClientProvider();
             Volatile.Write(ref _rtspTransportClient, rtspTransportClient);
 
@@ -88,15 +97,26 @@ namespace RtspClientSharp.Rtsp
             bool anyTrackRequested = false;
             foreach (RtspMediaTrackInfo track in GetTracksToSetup(tracks))
             {
-                await SetupTrackAsync(track, token);
+                await SetupTrackAsync(initialTimeStamp, track, token);
                 anyTrackRequested = true;
             }
 
             if (!anyTrackRequested)
                 throw new RtspClientException("Any suitable track is not found");
 
-            RtspRequestMessage playRequest = _requestMessageFactory.CreatePlayRequest();
+            // TODO: Seems like some timestamps are being returned with 2 different timezones and/or some difference between the requested datetime and the returned one.
+            RtspRequestMessage playRequest = (initialTimeStamp != default(DateTime) ? _requestMessageFactory.CreatePlayRequest(initialTimeStamp) : _requestMessageFactory.CreatePlayRequest());
+            RtspResponseMessage playResponse = 
             await _rtspTransportClient.EnsureExecuteRequest(playRequest, token, 1);
+
+            // TODO : Create a specific parse to convert the clock values
+            Regex clockRegex = new Regex(@"clock=(?<startTime>\d{8}T\d{6}Z)\-(?<endTime>\d{8}T\d{6}Z)", RegexOptions.Singleline);
+            foreach (string playResponseHeader in playResponse.Headers.GetValues("Range"))
+            {
+                Match clockMatches = clockRegex.Match(playResponseHeader);
+                if (clockMatches.Success)
+                    _mediaPayloadParser.BaseTime = DateTime.ParseExact(clockMatches.Groups["startTime"].Value, "yyyyMMddTHHmmssZ", CultureInfo.InvariantCulture, DateTimeStyles.None);
+            }
         }
 
         public async Task ReceiveAsync(CancellationToken token)
@@ -178,7 +198,7 @@ namespace RtspClientSharp.Rtsp
             return RtcpReportIntervalBaseMs + _random.Next(0, 11) * 100;
         }
 
-        private async Task SetupTrackAsync(RtspMediaTrackInfo track, CancellationToken token)
+        private async Task SetupTrackAsync(DateTime initialTimeStamp, RtspMediaTrackInfo track, CancellationToken token)
         {
             RtspRequestMessage setupRequest;
             RtspResponseMessage setupResponse;
@@ -280,22 +300,23 @@ namespace RtspClientSharp.Rtsp
 
             ParseSessionHeader(setupResponse.Headers[WellKnownHeaders.Session]);
 
-            IMediaPayloadParser mediaPayloadParser = MediaPayloadParser.CreateFrom(track.Codec);
+            _mediaPayloadParser = MediaPayloadParser.CreateFrom(track.Codec);
+            _mediaPayloadParser.BaseTime = (initialTimeStamp != default(DateTime) ? initialTimeStamp : default(DateTime));
 
             IRtpSequenceAssembler rtpSequenceAssembler;
 
             if (_connectionParameters.RtpTransport == RtpTransportProtocol.TCP)
             {
                 rtpSequenceAssembler = null;
-                mediaPayloadParser.FrameGenerated = OnFrameGeneratedLockfree;
+                _mediaPayloadParser.FrameGenerated = OnFrameGeneratedLockfree;
             }
             else
             {
                 rtpSequenceAssembler = new RtpSequenceAssembler(Constants.UdpReceiveBufferSize, 256);
-                mediaPayloadParser.FrameGenerated = OnFrameGeneratedThreadSafe;
+                _mediaPayloadParser.FrameGenerated = OnFrameGeneratedThreadSafe;
             }
 
-            var rtpStream = new RtpStream(mediaPayloadParser, track.SamplesFrequency, rtpSequenceAssembler);
+            var rtpStream = new RtpStream(_mediaPayloadParser, track.SamplesFrequency, rtpSequenceAssembler);
             _streamsMap.Add(rtpChannelNumber, rtpStream);
 
             var rtcpStream = new RtcpStream();

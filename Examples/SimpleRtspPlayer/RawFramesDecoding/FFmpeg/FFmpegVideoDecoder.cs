@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using RtspClientSharp.RawFrames.Video;
+﻿using RtspClientSharp.RawFrames.Video;
 using SimpleRtspPlayer.RawFramesDecoding.DecodedFrames;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
 {
@@ -71,13 +70,39 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                         }
                     }
                 }
+                else if (rawVideoFrame is RawH265IFrame rawH265IFrame)
+                {
+                    if (rawH265IFrame.ParametersBytesSegment.Array != null &&
+                        !_extraData.SequenceEqual(rawH265IFrame.ParametersBytesSegment))
+                    {
+                        if (_extraData.Length != rawH265IFrame.ParametersBytesSegment.Count)
+                            _extraData = new byte[rawH265IFrame.ParametersBytesSegment.Count];
+
+                        Buffer.BlockCopy(rawH265IFrame.ParametersBytesSegment.Array, rawH265IFrame.ParametersBytesSegment.Offset,
+                            _extraData, 0, rawH265IFrame.ParametersBytesSegment.Count);
+
+                        fixed (byte* initDataPtr = &_extraData[0])
+                        {
+                            resultCode = FFmpegVideoPInvoke.SetVideoDecoderExtraData(_decoderHandle,
+                                (IntPtr)initDataPtr, _extraData.Length);
+
+                            if (resultCode != 0)
+                                throw new DecoderException(
+                                    $"An error occurred while setting video extra data, {_videoCodecId} codec, code: {resultCode}");
+                        }
+                    }
+                }
+
+                char* resultString = null;
 
                 resultCode = FFmpegVideoPInvoke.DecodeFrame(_decoderHandle, (IntPtr)rawBufferPtr,
                     rawVideoFrame.FrameSegment.Count,
                     out int width, out int height, out FFmpegPixelFormat pixelFormat);
 
                 if (resultCode != 0)
-                    return null;
+                    throw new DecoderException(
+                        $"An error occurred while trying to decode the frames, { _videoCodecId } codec, code: { resultCode }");
+
 
                 if (_currentFrameParameters.Width != width || _currentFrameParameters.Height != height ||
                     _currentFrameParameters.PixelFormat != pixelFormat)

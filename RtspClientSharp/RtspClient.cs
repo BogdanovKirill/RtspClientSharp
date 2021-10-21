@@ -48,13 +48,24 @@ namespace RtspClientSharp
         /// <exception cref="RtspClientException"></exception>
         public async Task ConnectAsync(CancellationToken token)
         {
+            await ConnectAsync(default(DateTime), token);
+        }
+
+        /// <summary>
+        /// Connect to endpoint and start RTSP session
+        /// </summary>
+        /// <exception cref="OperationCanceledException"></exception>
+        /// <exception cref="InvalidCredentialException"></exception>
+        /// <exception cref="RtspClientException"></exception>
+        public async Task ConnectAsync(DateTime initialTimestamp, CancellationToken token)
+        {
             await Task.Run(async () =>
             {
                 _rtspClientInternal = CreateRtspClientInternal(ConnectionParameters, _transportClientProvider);
 
                 try
                 {
-                    Task connectionTask = _rtspClientInternal.ConnectAsync(token);
+                    Task connectionTask = _rtspClientInternal.ConnectAsync(initialTimestamp, token);
 
                     if (connectionTask.IsCompleted)
                     {
