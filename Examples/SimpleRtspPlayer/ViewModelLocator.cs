@@ -1,6 +1,6 @@
-﻿using System;
-using SimpleRtspPlayer.GUI.Models;
+﻿using SimpleRtspPlayer.GUI.Models;
 using SimpleRtspPlayer.GUI.ViewModels;
+using System;
 
 namespace SimpleRtspPlayer
 {
@@ -16,5 +16,14 @@ namespace SimpleRtspPlayer
             var model = new MainWindowModel();
             return new MainWindowViewModel(model);
         }
+
+        private readonly Lazy<LoggerWindowViewModel> _loggerWindowViewModelLazy =
+            new Lazy<LoggerWindowViewModel>(CreateLoggerWindowViewModel);
+
+        public LoggerWindowViewModel LoggerWindowViewModel => _loggerWindowViewModelLazy.Value;
+
+        private static LoggerWindowViewModel CreateLoggerWindowViewModel()
+            => new LoggerWindowViewModel();
+        
     }
 }

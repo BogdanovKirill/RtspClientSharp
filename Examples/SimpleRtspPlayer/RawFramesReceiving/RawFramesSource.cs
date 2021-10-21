@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Globalization;
 using System.Security.Authentication;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using RtspClientSharp;
@@ -45,6 +47,8 @@ namespace SimpleRtspPlayer.RawFramesReceiving
         {
             try
             {
+                DateTime initialTimestamp = await GetRtspUriDateTimeAsync(_connectionParameters.ConnectionUri.AbsoluteUri);
+
                 using (var rtspClient = new RtspClient(_connectionParameters))
                 {
                     rtspClient.FrameReceived += RtspClientOnFrameReceived;
@@ -55,7 +59,7 @@ namespace SimpleRtspPlayer.RawFramesReceiving
 
                         try
                         {
-                            await rtspClient.ConnectAsync(token);
+                            await rtspClient.ConnectAsync(initialTimestamp, token);
                         }
                         catch (InvalidCredentialException)
                         {
@@ -92,11 +96,44 @@ namespace SimpleRtspPlayer.RawFramesReceiving
         private void RtspClientOnFrameReceived(object sender, RawFrame rawFrame)
         {
             FrameReceived?.Invoke(this, rawFrame);
+            OnStatusChanged(rawFrame.Timestamp.ToString());
         }
 
         private void OnStatusChanged(string status)
         {
             ConnectionStatusChanged?.Invoke(this, status);
+        }
+
+        private async Task<DateTime> GetRtspUriDateTimeAsync(string rtspUri)
+        {
+            Regex HikvisionIsapiDateTimeFormat = new Regex(@"\d{8}\w*(t)*\w\d{6}\w*(z)*\w");
+            Regex IntelbrasDateTimeFormat = new Regex(@"\d{4}\w*(_)*\w\d{2}\w*(_)*\w\d{2}\w*(_)*\w\d{2}\w*(_)*\w\d{2}\w*(_)*\w\d{2}");
+            string[] stringSeparator = new string[] { "starttime=" };
+
+            var startDate = rtspUri.Split(stringSeparator, StringSplitOptions.RemoveEmptyEntries);
+
+            if (String.IsNullOrEmpty(startDate[1]))
+                throw new ArgumentNullException();
+
+            DateTime initialDate = DateTime.MinValue;
+
+            if (HikvisionIsapiDateTimeFormat.IsMatch(startDate[1]))
+                initialDate = await ParseDateToTimeAsync(startDate[1].Replace("t", String.Empty).Replace("z", String.Empty));
+            else if (IntelbrasDateTimeFormat.IsMatch(startDate[1]))
+                initialDate = await ParseDateToTimeAsync(startDate[1].Replace("_", String.Empty));
+
+            await Task.Delay(500);
+            return initialDate;
+        }
+
+        private async Task<DateTime> ParseDateToTimeAsync(string dateTime)
+        {
+            DateTime convertedDateTime = DateTime.MinValue;
+
+            await Task.Delay(500);
+            DateTime.TryParseExact(dateTime, "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out convertedDateTime);
+
+            return convertedDateTime;
         }
     }
 }

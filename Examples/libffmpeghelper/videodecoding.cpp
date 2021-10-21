@@ -5,12 +5,13 @@ struct VideoDecoderContext
 	AVCodec *codec;
 	AVCodecContext *av_codec_context;
 	AVPacket av_raw_packet;
+	AVPacket av_pkt;
 	AVFrame *frame;
 };
 
 struct ScalerContext
 {
-	SwsContext *sws_context;
+	SwsContext* sws_context;
 	int source_left;
 	int source_top;
 	int source_height;
@@ -60,6 +61,7 @@ int create_video_decoder(int codec_id, void **handle)
 	av_init_packet(&context->av_raw_packet);
 
 	*handle = context;
+
 	return 0;
 }
 

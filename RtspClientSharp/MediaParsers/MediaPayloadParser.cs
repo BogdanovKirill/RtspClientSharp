@@ -1,8 +1,8 @@
-﻿using System;
-using RtspClientSharp.Codecs;
+﻿using RtspClientSharp.Codecs;
 using RtspClientSharp.Codecs.Audio;
 using RtspClientSharp.Codecs.Video;
 using RtspClientSharp.RawFrames;
+using System;
 
 namespace RtspClientSharp.MediaParsers
 {

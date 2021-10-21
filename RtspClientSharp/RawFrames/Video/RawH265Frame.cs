@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace RtspClientSharp.RawFrames.Video
 {
@@ -11,7 +9,7 @@ namespace RtspClientSharp.RawFrames.Video
         public static readonly int StartMarkerSize = StartMarker.Length;
 
         protected RawH265Frame(DateTime timestamp, ArraySegment<byte> frameSegment)
-            : base(timestamp, frameSegment)
+            :base(timestamp, frameSegment)
         {
         }
     }

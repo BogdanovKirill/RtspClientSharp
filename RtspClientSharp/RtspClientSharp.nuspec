@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
   <metadata>
     <id>RtspClientSharp</id>
-    <version>1.4.2</version>
+    <version>1.4.3</version>
     <authors>Kirill Bogdanov</authors>
     <owners>Kirill Bogdanov</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

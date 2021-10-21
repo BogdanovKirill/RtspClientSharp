@@ -91,7 +91,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                 scaledWidth, scaledHeight, scaledFFmpegPixelFormat, scaleQuality, out var handle);
 
             if (resultCode != 0)
-                throw new DecoderException(@"An error occurred while creating scaler, code: {resultCode}");
+                throw new DecoderException($"An error occurred while creating scaler, code: {resultCode}");
 
             return new FFmpegDecodedVideoScaler(handle, scaledWidth, scaledHeight, scaledPixelFormat);
         }
@@ -126,7 +126,7 @@ namespace SimpleRtspPlayer.RawFramesDecoding.FFmpeg
                 return FFmpegPixelFormat.BGRA;
             if (pixelFormat == PixelFormat.Grayscale)
                 return FFmpegPixelFormat.GRAY8;
-            if (pixelFormat == PixelFormat.Bgr24)
+                if (pixelFormat == PixelFormat.Bgr24)
                 return FFmpegPixelFormat.BGR24;
 
             throw new ArgumentOutOfRangeException(nameof(pixelFormat));

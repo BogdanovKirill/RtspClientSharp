@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Logger;
 using RtspClientSharp.Codecs;
 using RtspClientSharp.Codecs.Audio;
 using RtspClientSharp.Codecs.Video;
@@ -111,6 +112,8 @@ namespace RtspClientSharp.Sdp
                 return;
 
             string attributeValue = line.Substring(colonIndex).TrimStart();
+
+            //PlayerLogger.fLogMethod($"ParseAttributesLine { attributeName } { attributeValue }");
 
             switch (attributeName)
             {
@@ -286,6 +289,74 @@ namespace RtspClientSharp.Sdp
             }
         }
 
+        private static void ParseH265FormatAttributes(string[] formatAttributes, H265CodecInfo h265CodecInfo)
+        {
+            string spropVpsSet = formatAttributes.FirstOrDefault(fa =>
+                fa.StartsWith("sprop-vps", StringComparison.InvariantCultureIgnoreCase));
+
+            if (spropVpsSet != null)
+            {
+                string spropVpsSetValue = GetFormatParameterValue(spropVpsSet);
+
+                h265CodecInfo.VpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropVpsSetValue)).ToArray();
+            }
+
+            string spropSpsSet = formatAttributes.FirstOrDefault(fa =>
+                fa.StartsWith("sprop-sps", StringComparison.InvariantCultureIgnoreCase));
+
+            if (spropSpsSet != null)
+            {
+                string spropSpsSetValue = GetFormatParameterValue(spropSpsSet);
+
+                h265CodecInfo.SpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropSpsSetValue)).ToArray();
+            }
+
+            string spropPpsSet = formatAttributes.FirstOrDefault(fa =>
+                fa.StartsWith("sprop-pps", StringComparison.InvariantCultureIgnoreCase));
+
+            if (spropPpsSet != null)
+            {
+                string spropPpsSetValue = GetFormatParameterValue(spropPpsSet);
+
+                h265CodecInfo.PpsBytes = RawH265Frame.StartMarker.Concat(Convert.FromBase64String(spropPpsSetValue)).ToArray();
+            }
+
+
+            /* sprop-max-don-diff: 0-32767
+
+                 When the RTP stream depends on one or more other RTP
+                 streams (in this case tx-mode MUST be equal to "MSM" and
+                 MSM is in use), this parameter MUST be present and the
+                 value MUST be greater than 0.
+            */
+            string spropMaxDonDiffSet = formatAttributes.FirstOrDefault(fa =>
+                fa.StartsWith("sprop-max-don-diff", StringComparison.InvariantCultureIgnoreCase));
+
+            if (spropMaxDonDiffSet != null)
+            {
+                int donlField;
+                bool spropMaxDonDiffValue = int.TryParse(GetFormatParameterValue(spropMaxDonDiffSet), out donlField);
+                
+                if (spropMaxDonDiffValue)
+                    if (donlField > 0)
+                        h265CodecInfo.HasDonlField = true;
+            }
+
+            /* sprop-depack-buf-nalus: 0-32767 */
+            string spropDepackBufNalusSet = formatAttributes.FirstOrDefault(fa =>
+              fa.StartsWith("sprop-depack-buf-nalus", StringComparison.InvariantCultureIgnoreCase));
+            
+            if (spropDepackBufNalusSet != null)
+            {
+                int depackBufNalus;
+                bool spropDepackBufNalusValue = int.TryParse(GetFormatParameterValue(spropDepackBufNalusSet), out depackBufNalus);
+
+                if (spropDepackBufNalusValue)
+                    if (depackBufNalus > 0)
+                        h265CodecInfo.HasDonlField = true;
+            }
+        }
+
         private static void ParseAACFormatAttributes(string[] formatAttributes, AACCodecInfo aacCodecInfo)
         {
             string sizeLengthParameter = formatAttributes.FirstOrDefault(fa =>
@@ -357,6 +428,9 @@ namespace RtspClientSharp.Sdp
                     break;
                 case 26:
                     codecInfo = new MJPEGCodecInfo();
+                    break;
+                case 98:
+                    codecInfo = new H265CodecInfo();
                     break;
                 case 105:
                     codecInfo = new H264CodecInfo();
