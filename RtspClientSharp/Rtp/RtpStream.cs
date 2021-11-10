@@ -1,6 +1,5 @@
-﻿using System;
-using Logger;
-using RtspClientSharp.MediaParsers;
+﻿using RtspClientSharp.MediaParsers;
+using System;
 
 namespace RtspClientSharp.Rtp
 {
@@ -88,7 +87,7 @@ namespace RtspClientSharp.Rtp
                 return;
 
             TimeSpan timeOffset = _samplesFrequency != 0
-                ? new TimeSpan((long) (_samplesSum * 1000 / (uint) _samplesFrequency * TimeSpan.TicksPerMillisecond))
+                ? new TimeSpan((_samplesSum * 1000 / (uint) _samplesFrequency * TimeSpan.TicksPerMillisecond))
                 : TimeSpan.MinValue;
 
             _mediaPayloadParser.Parse(timeOffset, rtpPacket.PayloadSegment, rtpPacket.MarkerBit);
