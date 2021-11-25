@@ -42,7 +42,7 @@ namespace RtspClientSharp.Rtcp
                 chunk.Serialize(stream);
             }
 
-            if (_paddingByteCount > 0)
+            if ((_paddingByteCount > 0) && (_paddingByteCount < 4))
                 stream.Write(PaddingBytes, 0, _paddingByteCount);
         }
     }
