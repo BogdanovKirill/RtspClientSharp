@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Kirill Bogdanov</Authors>
     <RepositoryUrl>https://github.com/BogdanovKirill/RtspClientSharp</RepositoryUrl>
     <PackageTags>rtsp, rtp, rtcp</PackageTags>
