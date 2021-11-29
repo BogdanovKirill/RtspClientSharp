@@ -106,17 +106,17 @@ namespace RtspClientSharp.Rtsp
 
             // TODO: Seems like some timestamps are being returned with 2 different timezones and/or some difference between the requested datetime and the returned one.
             RtspRequestMessage playRequest = (initialTimeStamp != default(DateTime) ? _requestMessageFactory.CreatePlayRequest(initialTimeStamp) : _requestMessageFactory.CreatePlayRequest());
-            RtspResponseMessage playResponse = 
+            RtspResponseMessage playResponse =
             await _rtspTransportClient.EnsureExecuteRequest(playRequest, token, 1);
 
-            // TODO : Create a specific parse to convert the clock values
-            Regex clockRegex = new Regex(@"clock=(?<startTime>\d{8}T\d{6}Z)\-(?<endTime>\d{8}T\d{6}Z)", RegexOptions.Singleline);
-            foreach (string playResponseHeader in playResponse.Headers.GetValues("Range"))
-            {
-                Match clockMatches = clockRegex.Match(playResponseHeader);
-                if (clockMatches.Success)
-                    _mediaPayloadParser.BaseTime = DateTime.ParseExact(clockMatches.Groups["startTime"].Value, "yyyyMMddTHHmmssZ", CultureInfo.InvariantCulture, DateTimeStyles.None);
-            }
+            //// TODO : Create a specific parse to convert the clock values
+            //Regex clockRegex = new Regex(@"clock=(?<startTime>\d{8}T\d{6}Z)\-(?<endTime>\d{8}T\d{6}Z)", RegexOptions.Singleline);
+            //foreach (string playResponseHeader in playResponse.Headers.GetValues("Range"))
+            //{
+            //    Match clockMatches = clockRegex.Match(playResponseHeader);
+            //    if (clockMatches.Success)
+            //        _mediaPayloadParser.BaseTime = DateTime.ParseExact(clockMatches.Groups["startTime"].Value, "yyyyMMddTHHmmssZ", CultureInfo.InvariantCulture, DateTimeStyles.None);
+            //}
         }
 
         public async Task ReceiveAsync(CancellationToken token)
