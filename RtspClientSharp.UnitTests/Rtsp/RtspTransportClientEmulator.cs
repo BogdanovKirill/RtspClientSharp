@@ -57,6 +57,8 @@ namespace RtspClientSharp.UnitTests.Rtsp
 
         public EndPoint RemoteEndPoint => new IPEndPoint(IPAddress.Loopback, 11080);
 
+        public EndPoint LocalEndPoint => new IPEndPoint(IPAddress.Loopback, 11080);
+
         public virtual Task ConnectAsync(CancellationToken token)
         {
             return Task.CompletedTask;

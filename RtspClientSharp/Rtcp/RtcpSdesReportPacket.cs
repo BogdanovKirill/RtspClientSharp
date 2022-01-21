@@ -18,18 +18,11 @@ namespace RtspClientSharp.Rtcp
 
             SourceCount = chunks.Count;
             PayloadType = 202;
+            PaddingFlag = false;  // this is different padding, see https://www.ietf.org/rfc/rfc3550.txt page 46
 
             int length = chunks.Sum(chunk => chunk.SerializedLength);
 
-            int fraction = length % 4;
-
-            if (fraction == 0)
-                PaddingFlag = false;
-            else
-            {
-                PaddingFlag = true;
-                _paddingByteCount = 4 - fraction;
-            }
+            _paddingByteCount = 4 - length % 4;
 
             DwordLength = (length + 3) / 4;
             Length = (DwordLength + 1) * 4;
@@ -49,7 +42,7 @@ namespace RtspClientSharp.Rtcp
                 chunk.Serialize(stream);
             }
 
-            if (PaddingFlag)
+            if ((_paddingByteCount > 0) && (_paddingByteCount < 4))
                 stream.Write(PaddingBytes, 0, _paddingByteCount);
         }
     }

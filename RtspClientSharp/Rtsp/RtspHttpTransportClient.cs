@@ -22,9 +22,11 @@ namespace RtspClientSharp.Rtsp
         private Stream _dataNetworkStream;
         private uint _commandCounter;
         private EndPoint _remoteEndPoint = new IPEndPoint(IPAddress.None, 0);
+        private EndPoint _localEndPoint = new IPEndPoint(IPAddress.Any, 0);
         private int _disposed;
 
         public override EndPoint RemoteEndPoint => _remoteEndPoint;
+        public override EndPoint LocalEndPoint => _localEndPoint;
 
         public RtspHttpTransportClient(ConnectionParameters connectionParameters)
             : base(connectionParameters)
@@ -45,6 +47,7 @@ namespace RtspClientSharp.Rtsp
             await _streamDataClient.ConnectAsync(connectionUri.Host, httpPort);
 
             _remoteEndPoint = _streamDataClient.RemoteEndPoint;
+            _localEndPoint = _streamDataClient.LocalEndPoint;
             _dataNetworkStream = new NetworkStream(_streamDataClient, false);
 
             string request = ComposeGetRequest();

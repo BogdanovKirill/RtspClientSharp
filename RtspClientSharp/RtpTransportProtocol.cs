@@ -3,6 +3,7 @@
     public enum RtpTransportProtocol
     {
         TCP,
-        UDP
+        UDP,
+        MULTICAST
     }
 }
