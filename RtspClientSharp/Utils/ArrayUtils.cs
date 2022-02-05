@@ -57,7 +57,14 @@
             for (; startIndex < endIndex; startIndex++)
             {
                 if (array[startIndex] != pattern[foundIndex])
+                {
+                    // When the pattern is partially found but then mismatches, the start search index
+                    // must be moved back to index just after where the original successful matching started.
+                    // Otherwise, matches that begin within an attempted match would be missed.
+                    // e.g., array: 123400001567, pattern: 0001, would errnoneously return -1
+                    startIndex -= foundIndex; // for loop will then add 1
                     foundIndex = 0;
+                }
                 else if (++foundIndex == patternLength)
                     return startIndex - foundIndex + 1;
             }

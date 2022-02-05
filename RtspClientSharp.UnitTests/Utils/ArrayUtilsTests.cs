@@ -96,6 +96,17 @@ namespace RtspClientSharp.UnitTests.Utils
         }
 
         [TestMethod]
+        public void IndexOfBytes_PatternExists_BackTrack_ReturnsActualIndex()
+        {
+            var pattern = new byte[] { 0, 0, 1 };
+            var bytes = new byte[] { 0, 5, 0, 0, 0, 1, 3, 4 };
+
+            int index = ArrayUtils.IndexOfBytes(bytes, pattern, 1, bytes.Length - 1);
+
+            Assert.AreEqual(3, index);
+        }
+
+        [TestMethod]
         public void IndexOfBytes_PatternNotExists_ReturnsMinusOne()
         {
             var pattern = new byte[] {1, 2, 3};
