@@ -59,7 +59,7 @@ namespace SimpleRtspPlayer.RawFramesReceiving
 
                         try
                         {
-                            await rtspClient.ConnectAsync(new RtspRequestParams { InitialTimestamp = initialTimestamp, Token = token });
+                            await rtspClient.ConnectAsync(initialTimestamp, token);
                         }
                         catch (InvalidCredentialException)
                         {

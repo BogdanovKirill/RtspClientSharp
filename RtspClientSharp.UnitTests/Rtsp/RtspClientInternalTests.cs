@@ -18,7 +18,7 @@ namespace RtspClientSharp.UnitTests.Rtsp
             var transportClient = new RtspTransportClientEmulator();
 
             var rtspClient = new RtspClientInternal(_fakeConnectionParameters, () => transportClient);
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = CancellationToken.None });
+            await rtspClient.ConnectAsync(CancellationToken.None);
         }
 
         [TestMethod]
@@ -31,7 +31,7 @@ namespace RtspClientSharp.UnitTests.Rtsp
 
             var rtspClient = new RtspClientInternal(_fakeConnectionParameters, () => transportClient);
 
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = cancellationTokenSource.Token });
+            await rtspClient.ConnectAsync(cancellationTokenSource.Token);
         }
 
         [TestMethod]
@@ -40,7 +40,7 @@ namespace RtspClientSharp.UnitTests.Rtsp
             var transportClient = new RtspTransportClientEmulator();
             var rtspClient = new RtspClientInternal(_fakeConnectionParameters, () => transportClient);
 
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = CancellationToken.None });
+            await rtspClient.ConnectAsync(CancellationToken.None);
             await rtspClient.ReceiveAsync(CancellationToken.None);
         }
 
@@ -52,7 +52,7 @@ namespace RtspClientSharp.UnitTests.Rtsp
             var cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
 
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = CancellationToken.None });
+            await rtspClient.ConnectAsync(CancellationToken.None);
             await rtspClient.ReceiveAsync(cancellationTokenSource.Token);
         }
     }

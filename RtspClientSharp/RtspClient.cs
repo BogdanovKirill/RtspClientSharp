@@ -46,7 +46,18 @@ namespace RtspClientSharp
         /// <exception cref="OperationCanceledException"></exception>
         /// <exception cref="InvalidCredentialException"></exception>
         /// <exception cref="RtspClientException"></exception>
-        public async Task ConnectAsync(RtspRequestParams connectionParams)
+        public async Task ConnectAsync(CancellationToken token)
+        {
+            await ConnectAsync(default(DateTime), token);
+        }
+
+        /// <summary>
+        /// Connect to endpoint and start RTSP session
+        /// </summary>
+        /// <exception cref="OperationCanceledException"></exception>
+        /// <exception cref="InvalidCredentialException"></exception>
+        /// <exception cref="RtspClientException"></exception>
+        public async Task ConnectAsync(DateTime initialTimestamp, CancellationToken token)
         {
             await Task.Run(async () =>
             {
@@ -54,7 +65,7 @@ namespace RtspClientSharp
 
                 try
                 {
-                    Task connectionTask = _rtspClientInternal.ConnectAsync(connectionParams);
+                    Task connectionTask = _rtspClientInternal.ConnectAsync(initialTimestamp, token);
 
                     if (connectionTask.IsCompleted)
                     {
@@ -64,7 +75,7 @@ namespace RtspClientSharp
 
                     var delayTaskCancelTokenSource = new CancellationTokenSource();
                     using (var linkedTokenSource =
-                        CancellationTokenSource.CreateLinkedTokenSource(delayTaskCancelTokenSource.Token, connectionParams.Token))
+                        CancellationTokenSource.CreateLinkedTokenSource(delayTaskCancelTokenSource.Token, token))
                     {
                         CancellationToken delayTaskToken = linkedTokenSource.Token;
 
@@ -106,7 +117,7 @@ namespace RtspClientSharp
 
                     throw;
                 }
-            }, connectionParams.Token).ConfigureAwait(false);
+            }, token).ConfigureAwait(false);
         }
 
         /// <summary>

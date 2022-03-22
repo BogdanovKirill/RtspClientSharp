@@ -45,7 +45,7 @@ namespace SimpleRtspClient
 
                         try
                         {
-                            await rtspClient.ConnectAsync(new RtspRequestParams { Token = token });
+                            await rtspClient.ConnectAsync(token);
                         }
                         catch (OperationCanceledException)
                         {

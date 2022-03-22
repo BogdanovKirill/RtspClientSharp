@@ -40,7 +40,7 @@ namespace RtspClientSharp.UnitTests
                 .Throws(exception);
 
             var rtspClient = new RtspClient(ConnectionParameters, () => transportClientMock.Object);
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = CancellationToken.None });
+            await rtspClient.ConnectAsync(CancellationToken.None);
         }
 
         [TestMethod]
@@ -51,7 +51,7 @@ namespace RtspClientSharp.UnitTests
             transportClientMock.Setup(x => x.ConnectAsync(It.IsAny<CancellationToken>())).Returns(Task.Delay(10));
 
             var rtspClient = new RtspClient(ConnectionParameters, () => transportClientMock.Object);
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = CancellationToken.None });
+            await rtspClient.ConnectAsync(CancellationToken.None);
         }
 
         [TestMethod]
@@ -64,7 +64,7 @@ namespace RtspClientSharp.UnitTests
             cancellationTokenSource.Cancel();
 
             var rtspClient = new RtspClient(ConnectionParameters, () => transportClientMock.Object);
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = CancellationToken.None });
+            await rtspClient.ConnectAsync(cancellationTokenSource.Token);
         }
 
         [TestMethod]
@@ -72,7 +72,7 @@ namespace RtspClientSharp.UnitTests
         {
             var transportClient = new RtspTransportClientEmulator();
             var rtspClient = new RtspClient(ConnectionParameters, () => transportClient);
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = CancellationToken.None });
+            await rtspClient.ConnectAsync(CancellationToken.None);
         }
 
         [TestMethod]
@@ -90,7 +90,7 @@ namespace RtspClientSharp.UnitTests
             var transportClient = new RtspTransportClientEmulator();
             var rtspClient = new RtspClient(ConnectionParameters, () => transportClient);
 
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = CancellationToken.None });
+            await rtspClient.ConnectAsync(CancellationToken.None);
             await rtspClient.ReceiveAsync(CancellationToken.None);
         }
 
@@ -102,7 +102,7 @@ namespace RtspClientSharp.UnitTests
             var cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
 
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = CancellationToken.None });
+            await rtspClient.ConnectAsync(CancellationToken.None);
             await rtspClient.ReceiveAsync(cancellationTokenSource.Token);
         }
     }

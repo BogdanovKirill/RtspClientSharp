@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using CommandLine;
 using RtspClientSharp;
 using RtspClientSharp.RawFrames.Video;
-using RtspClientSharp.Rtsp;
 
 namespace MjpegSnapshotsMaker
 {
@@ -82,7 +81,7 @@ namespace MjpegSnapshotsMaker
                     };
 
                     Console.WriteLine("Connecting...");
-                    await rtspClient.ConnectAsync(new RtspRequestParams { Token = token });
+                    await rtspClient.ConnectAsync(token);
                     Console.WriteLine("Receiving...");
                     await rtspClient.ReceiveAsync(token);
                 }
