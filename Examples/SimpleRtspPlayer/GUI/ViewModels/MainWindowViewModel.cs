@@ -1,11 +1,11 @@
-﻿using System;
+﻿using GalaSoft.MvvmLight.Command;
+using RtspClientSharp;
+using SimpleRtspPlayer.GUI.Models;
+using System;
 using System.ComponentModel;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Windows;
-using GalaSoft.MvvmLight.Command;
-using RtspClientSharp;
-using SimpleRtspPlayer.GUI.Models;
 
 namespace SimpleRtspPlayer.GUI.ViewModels
 {
@@ -19,8 +19,9 @@ namespace SimpleRtspPlayer.GUI.ViewModels
         private bool _startButtonEnabled = true;
         private bool _stopButtonEnabled;
 
-        public string DeviceAddress { get; set; } = "rtsp://184.72.239.149/vod/mp4:BigBuckBunny_115k.mov";
+        public LoggerWindowViewModel loggerViewModel;
 
+        public string DeviceAddress { get; set; } = "rtsp://184.72.239.149/vod/mp4:BigBuckBunny_115k.mov"; //Remove this comment before commit to the remote branch    
         public string Login { get; set; } = "admin";
         public string Password { get; set; } = "123456";
 
@@ -45,7 +46,7 @@ namespace SimpleRtspPlayer.GUI.ViewModels
         public MainWindowViewModel(IMainWindowModel mainWindowModel)
         {
             _mainWindowModel = mainWindowModel ?? throw new ArgumentNullException(nameof(mainWindowModel));
-            
+
             StartClickCommand = new RelayCommand(OnStartButtonClick, () => _startButtonEnabled);
             StopClickCommand = new RelayCommand(OnStopButtonClick, () => _stopButtonEnabled);
             ClosingCommand = new RelayCommand<CancelEventArgs>(OnClosing);
@@ -71,7 +72,7 @@ namespace SimpleRtspPlayer.GUI.ViewModels
 
             var credential = new NetworkCredential(Login, Password);
 
-            var connectionParameters = !string.IsNullOrEmpty(deviceUri.UserInfo) ? new ConnectionParameters(deviceUri) : 
+            var connectionParameters = !string.IsNullOrEmpty(deviceUri.UserInfo) ? new ConnectionParameters(deviceUri) :
                 new ConnectionParameters(deviceUri, credential);
 
             connectionParameters.RtpTransport = RtpTransportProtocol.TCP;

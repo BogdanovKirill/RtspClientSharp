@@ -27,7 +27,7 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -125,6 +125,10 @@
     <Compile Include="GUI\Models\MainWindowModel.cs" />
     <Compile Include="GUI\RealtimeAudioSource.cs" />
     <Compile Include="GUI\IAudioSource.cs" />
+    <Compile Include="GUI\ViewModels\LoggerWindowViewModel.cs" />
+    <Compile Include="GUI\Views\LoggerWindow.xaml.cs">
+      <DependentUpon>LoggerWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="RawFramesDecoding\DecodedFrames\DecodedAudioFrame.cs" />
     <Compile Include="RawFramesDecoding\DecodedFrames\DecodedVideoFrame.cs" />
     <Compile Include="RawFramesDecoding\DecodedFrames\IDecodedAudioFrame.cs" />
@@ -151,6 +155,10 @@
     <Compile Include="GUI\Views\VideoView.xaml.cs">
       <DependentUpon>VideoView.xaml</DependentUpon>
     </Compile>
+    <Page Include="GUI\Views\LoggerWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="GUI\Views\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -198,6 +206,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Logger\Logger.csproj">
+      <Project>{1ce31242-902d-46e6-b7e3-dbf45bf9abee}</Project>
+      <Name>Logger</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\RtspClientSharp\RtspClientSharp.csproj">
       <Project>{dc94331f-847e-4456-bd27-f147551750fb}</Project>
       <Name>RtspClientSharp</Name>

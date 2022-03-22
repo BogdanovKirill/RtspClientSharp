@@ -1,5 +1,5 @@
-﻿using System;
-using RtspClientSharp.MediaParsers;
+﻿using RtspClientSharp.MediaParsers;
+using System;
 
 namespace RtspClientSharp.Rtp
 {
@@ -9,7 +9,7 @@ namespace RtspClientSharp.Rtp
         private readonly IMediaPayloadParser _mediaPayloadParser;
         private readonly int _samplesFrequency;
 
-        private ulong _samplesSum;
+        private long _samplesSum;
         private ushort _previousSeqNumber;
         private uint _previousTimestamp;
         private bool _isFirstPacket = true;
@@ -51,7 +51,7 @@ namespace RtspClientSharp.Rtp
 
             if (!_isFirstPacket)
             {
-                int delta = (ushort) (rtpPacket.SeqNumber - _previousSeqNumber);
+                int delta = (ushort)(rtpPacket.SeqNumber - _previousSeqNumber);
 
                 if (delta != 1)
                 {
@@ -60,7 +60,7 @@ namespace RtspClientSharp.Rtp
                     if (lostCount == -1)
                         lostCount = ushort.MaxValue;
 
-                    CumulativePacketLost += (uint) lostCount;
+                    CumulativePacketLost += (uint)lostCount;
 
                     if (CumulativePacketLost > 0x7FFFFF)
                         CumulativePacketLost = 0x7FFFFF;
@@ -73,7 +73,11 @@ namespace RtspClientSharp.Rtp
                 if (rtpPacket.SeqNumber < HighestSequenceNumberReceived)
                     ++SequenceCycles;
 
-                _samplesSum += rtpPacket.Timestamp - _previousTimestamp;
+                if (rtpPacket.Timestamp > _previousTimestamp)
+                    _samplesSum += rtpPacket.Timestamp - _previousTimestamp;
+                else
+                    _samplesSum += _previousTimestamp - rtpPacket.Timestamp;
+
             }
 
             HighestSequenceNumberReceived = rtpPacket.SeqNumber;
@@ -87,7 +91,7 @@ namespace RtspClientSharp.Rtp
                 return;
 
             TimeSpan timeOffset = _samplesFrequency != 0
-                ? new TimeSpan((long) (_samplesSum * 1000 / (uint) _samplesFrequency * TimeSpan.TicksPerMillisecond))
+                ? new TimeSpan((_samplesSum * 1000 / (uint)_samplesFrequency * TimeSpan.TicksPerMillisecond))
                 : TimeSpan.MinValue;
 
             _mediaPayloadParser.Parse(timeOffset, rtpPacket.PayloadSegment, rtpPacket.MarkerBit);
