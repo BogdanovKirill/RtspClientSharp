@@ -46,7 +46,7 @@ namespace RtspClientSharp
         /// <exception cref="OperationCanceledException"></exception>
         /// <exception cref="InvalidCredentialException"></exception>
         /// <exception cref="RtspClientException"></exception>
-        public async Task ConnectAsync(RtspRequestParams connectionParams)
+        public async Task ConnectAsync(RtspRequestParams requestParams)
         {
             await Task.Run(async () =>
             {
@@ -54,7 +54,7 @@ namespace RtspClientSharp
 
                 try
                 {
-                    Task connectionTask = _rtspClientInternal.ConnectAsync(connectionParams);
+                    Task connectionTask = _rtspClientInternal.ConnectAsync(requestParams);
 
                     if (connectionTask.IsCompleted)
                     {
@@ -64,7 +64,7 @@ namespace RtspClientSharp
 
                     var delayTaskCancelTokenSource = new CancellationTokenSource();
                     using (var linkedTokenSource =
-                        CancellationTokenSource.CreateLinkedTokenSource(delayTaskCancelTokenSource.Token, connectionParams.Token))
+                        CancellationTokenSource.CreateLinkedTokenSource(delayTaskCancelTokenSource.Token, requestParams.Token))
                     {
                         CancellationToken delayTaskToken = linkedTokenSource.Token;
 
@@ -106,7 +106,7 @@ namespace RtspClientSharp
 
                     throw;
                 }
-            }, connectionParams.Token).ConfigureAwait(false);
+            }, requestParams.Token).ConfigureAwait(false);
         }
 
         /// <summary>

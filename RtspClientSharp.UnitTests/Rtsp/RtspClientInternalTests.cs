@@ -35,6 +35,17 @@ namespace RtspClientSharp.UnitTests.Rtsp
         }
 
         [TestMethod]
+        [ExpectedException(typeof(RtspClientException))]
+        public async Task ConnectAsync_RequestParamsNull_ThrowsException()
+        {
+            var transportClient = new RtspTransportClientEmulator();
+
+            var rtspClient = new RtspClientInternal(_fakeConnectionParameters, () => transportClient);
+
+            await rtspClient.ConnectAsync(null);
+        }
+
+        [TestMethod]
         public async Task ReceiveAsync_InterleavedModeAndOneRtcpByePacketInStream_SuccessfullyFinished()
         {
             var transportClient = new RtspTransportClientEmulator();
