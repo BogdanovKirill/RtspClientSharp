@@ -19,7 +19,7 @@ namespace RtspClientSharp
         /// <exception cref="OperationCanceledException"></exception>
         /// <exception cref="InvalidCredentialException"></exception>
         /// <exception cref="RtspClientException"></exception>
-        Task ConnectAsync(CancellationToken token);
+        Task ConnectAsync(RtspRequestParams connectionParams);
 
         /// <summary>
         /// Receive frames. 
