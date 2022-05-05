@@ -64,27 +64,25 @@ namespace RtspClientSharp.Rtsp
             _requestMessageFactory = new RtspRequestMessageFactory(fixedRtspUri, connectionParameters.UserAgent);
         }
 
-        public async Task ConnectAsync(CancellationToken token)
+        public async Task ConnectAsync(RtspRequestParams requestParams)
         {
-            await ConnectAsync(default(DateTime), token);
-        }
+            if (requestParams == null)
+                throw new RtspClientException("Request parameters can't be null");
 
-        public async Task ConnectAsync(DateTime initialTimeStamp, CancellationToken token)
-        {
             IRtspTransportClient rtspTransportClient = _transportClientProvider();
             Volatile.Write(ref _rtspTransportClient, rtspTransportClient);
 
-            await _rtspTransportClient.ConnectAsync(token);
+            await _rtspTransportClient.ConnectAsync(requestParams.Token);
 
             RtspRequestMessage optionsRequest = _requestMessageFactory.CreateOptionsRequest();
-            RtspResponseMessage optionsResponse = await _rtspTransportClient.ExecuteRequest(optionsRequest, token);
+            RtspResponseMessage optionsResponse = await _rtspTransportClient.ExecuteRequest(optionsRequest, requestParams.Token);
 
             if (optionsResponse.StatusCode == RtspStatusCode.Ok)
                 ParsePublicHeader(optionsResponse.Headers[WellKnownHeaders.Public]);
 
             RtspRequestMessage describeRequest = _requestMessageFactory.CreateDescribeRequest();
             RtspResponseMessage describeResponse =
-                await _rtspTransportClient.EnsureExecuteRequest(describeRequest, token);
+                await _rtspTransportClient.EnsureExecuteRequest(describeRequest, requestParams.Token);
 
             string contentBaseHeader = describeResponse.Headers[WellKnownHeaders.ContentBase];
 
@@ -95,9 +93,10 @@ namespace RtspClientSharp.Rtsp
             IEnumerable<RtspTrackInfo> tracks = parser.Parse(describeResponse.ResponseBody);
 
             bool anyTrackRequested = false;
+
             foreach (RtspMediaTrackInfo track in GetTracksToSetup(tracks))
             {
-                await SetupTrackAsync(initialTimeStamp, track, token);
+                await SetupTrackAsync(requestParams.InitialTimestamp, track, requestParams.Token);
                 anyTrackRequested = true;
             }
 
@@ -105,9 +104,9 @@ namespace RtspClientSharp.Rtsp
                 throw new RtspClientException("Any suitable track is not found");
 
             // TODO: Seems like some timestamps are being returned with 2 different timezones and/or some difference between the requested datetime and the returned one.
-            RtspRequestMessage playRequest = (initialTimeStamp != default(DateTime) ? _requestMessageFactory.CreatePlayRequest(initialTimeStamp) : _requestMessageFactory.CreatePlayRequest());
+            RtspRequestMessage playRequest = (requestParams.InitialTimestamp != default(DateTime) ? _requestMessageFactory.CreatePlayRequest(requestParams) : _requestMessageFactory.CreatePlayRequest());
             RtspResponseMessage playResponse =
-            await _rtspTransportClient.EnsureExecuteRequest(playRequest, token, 1);
+            await _rtspTransportClient.EnsureExecuteRequest(playRequest, requestParams.Token, 1);
 
             //// TODO : Create a specific parse to convert the clock values
             //Regex clockRegex = new Regex(@"clock=(?<startTime>\d{8}T\d{6}Z)\-(?<endTime>\d{8}T\d{6}Z)", RegexOptions.Singleline);

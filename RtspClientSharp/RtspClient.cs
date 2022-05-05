@@ -46,18 +46,7 @@ namespace RtspClientSharp
         /// <exception cref="OperationCanceledException"></exception>
         /// <exception cref="InvalidCredentialException"></exception>
         /// <exception cref="RtspClientException"></exception>
-        public async Task ConnectAsync(CancellationToken token)
-        {
-            await ConnectAsync(default(DateTime), token);
-        }
-
-        /// <summary>
-        /// Connect to endpoint and start RTSP session
-        /// </summary>
-        /// <exception cref="OperationCanceledException"></exception>
-        /// <exception cref="InvalidCredentialException"></exception>
-        /// <exception cref="RtspClientException"></exception>
-        public async Task ConnectAsync(DateTime initialTimestamp, CancellationToken token)
+        public async Task ConnectAsync(RtspRequestParams requestParams)
         {
             await Task.Run(async () =>
             {
@@ -65,7 +54,7 @@ namespace RtspClientSharp
 
                 try
                 {
-                    Task connectionTask = _rtspClientInternal.ConnectAsync(initialTimestamp, token);
+                    Task connectionTask = _rtspClientInternal.ConnectAsync(requestParams);
 
                     if (connectionTask.IsCompleted)
                     {
@@ -75,7 +64,7 @@ namespace RtspClientSharp
 
                     var delayTaskCancelTokenSource = new CancellationTokenSource();
                     using (var linkedTokenSource =
-                        CancellationTokenSource.CreateLinkedTokenSource(delayTaskCancelTokenSource.Token, token))
+                        CancellationTokenSource.CreateLinkedTokenSource(delayTaskCancelTokenSource.Token, requestParams.Token))
                     {
                         CancellationToken delayTaskToken = linkedTokenSource.Token;
 
@@ -117,7 +106,7 @@ namespace RtspClientSharp
 
                     throw;
                 }
-            }, token).ConfigureAwait(false);
+            }, requestParams.Token).ConfigureAwait(false);
         }
 
         /// <summary>
