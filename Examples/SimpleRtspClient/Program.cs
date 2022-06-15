@@ -11,8 +11,8 @@ namespace SimpleRtspClient
     {
         static void Main()
         {
-            var serverUri = new Uri("rtsp://192.168.1.77:554/ucast/11");
-            var credentials = new NetworkCredential("admin", "123456");
+            var serverUri = new Uri("rtsp://metalcar.ddns-motorolasecurity.com:554/chID=1&date=2022-06-14&time=00:00:00&timelen=40&action=playback");
+            var credentials = new NetworkCredential("admin", "metalcar1234");
 
             var connectionParameters = new ConnectionParameters(serverUri, credentials);
             var cancellationTokenSource = new CancellationTokenSource();

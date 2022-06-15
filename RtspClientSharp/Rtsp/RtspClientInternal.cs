@@ -2,12 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using RtspClientSharp.Codecs.Audio;
@@ -104,7 +102,10 @@ namespace RtspClientSharp.Rtsp
                 throw new RtspClientException("Any suitable track is not found");
 
             // TODO: Seems like some timestamps are being returned with 2 different timezones and/or some difference between the requested datetime and the returned one.
-            RtspRequestMessage playRequest = (requestParams.InitialTimestamp != default(DateTime) ? _requestMessageFactory.CreatePlayRequest(requestParams) : _requestMessageFactory.CreatePlayRequest());
+            RtspRequestMessage playRequest = 
+                requestParams.IsSetTimestampInClock ? 
+                _requestMessageFactory.CreatePlayRequest(requestParams) : 
+                _requestMessageFactory.CreatePlayRequest();
             RtspResponseMessage playResponse =
             await _rtspTransportClient.EnsureExecuteRequest(playRequest, requestParams.Token, 1);
 
@@ -197,7 +198,7 @@ namespace RtspClientSharp.Rtsp
             return RtcpReportIntervalBaseMs + _random.Next(0, 11) * 100;
         }
 
-        private async Task SetupTrackAsync(DateTime initialTimeStamp, RtspMediaTrackInfo track, CancellationToken token)
+        private async Task SetupTrackAsync(DateTime? initialTimeStamp, RtspMediaTrackInfo track, CancellationToken token)
         {
             RtspRequestMessage setupRequest;
             RtspResponseMessage setupResponse;
@@ -300,7 +301,7 @@ namespace RtspClientSharp.Rtsp
             ParseSessionHeader(setupResponse.Headers[WellKnownHeaders.Session]);
 
             _mediaPayloadParser = MediaPayloadParser.CreateFrom(track.Codec);
-            _mediaPayloadParser.BaseTime = (initialTimeStamp != default(DateTime) ? initialTimeStamp : default(DateTime));
+            _mediaPayloadParser.BaseTime = (initialTimeStamp != null ? initialTimeStamp.Value : default(DateTime));
 
             IRtpSequenceAssembler rtpSequenceAssembler;
 
