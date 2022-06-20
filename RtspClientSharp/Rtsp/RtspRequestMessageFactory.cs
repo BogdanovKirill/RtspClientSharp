@@ -70,10 +70,10 @@ namespace RtspClientSharp.Rtsp
 
             var rtspRequestMessage =
                 new RtspRequestMessage(RtspMethod.PLAY, uri, ProtocolVersion, NextCSeqProvider, _userAgent, SessionId);
-            if (connectionParams.InitialTimestamp.Kind == DateTimeKind.Utc)
-                rtspRequestMessage.Headers.Add("Range", $"clock={connectionParams.InitialTimestamp.ToString("yyyyMMddTHHmmssZ")}-");
+            if (connectionParams.InitialTimestamp.Value.Kind == DateTimeKind.Utc)
+                rtspRequestMessage.Headers.Add("Range", $"clock={connectionParams.InitialTimestamp.Value.ToString("yyyyMMddTHHmmssZ")}-");
             else
-                rtspRequestMessage.Headers.Add("Range", $"clock={DateTime.SpecifyKind(connectionParams.InitialTimestamp, DateTimeKind.Utc).ToString("yyyyMMddTHHmmssZ")}-");
+                rtspRequestMessage.Headers.Add("Range", $"clock={DateTime.SpecifyKind(connectionParams.InitialTimestamp.Value, DateTimeKind.Utc).ToString("yyyyMMddTHHmmssZ")}-");
 
             if (connectionParams?.Headers != null)
                 foreach (var item in connectionParams.Headers)

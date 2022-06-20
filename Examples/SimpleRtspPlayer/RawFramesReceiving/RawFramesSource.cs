@@ -47,8 +47,8 @@ namespace SimpleRtspPlayer.RawFramesReceiving
         {
             try
             {
-                DateTime initialTimestamp = await GetRtspUriDateTimeAsync(_connectionParameters.ConnectionUri.AbsoluteUri);
-
+                var (IsSetTimestampInClock, InitialTimestamp) = await GetRtspUriDateTimeAsync(_connectionParameters.ConnectionUri.AbsoluteUri);
+        
                 using (var rtspClient = new RtspClient(_connectionParameters))
                 {
                     rtspClient.FrameReceived += RtspClientOnFrameReceived;
@@ -59,7 +59,13 @@ namespace SimpleRtspPlayer.RawFramesReceiving
 
                         try
                         {
-                            await rtspClient.ConnectAsync(new RtspRequestParams { InitialTimestamp = initialTimestamp, Token = token });
+                            await rtspClient.ConnectAsync(new RtspRequestParams
+                            {
+                                InitialTimestamp = InitialTimestamp,
+                                IsSetTimestampInClock = IsSetTimestampInClock,
+                                Token = token
+                            })
+                                .ConfigureAwait(false);
                         }
                         catch (InvalidCredentialException)
                         {
@@ -104,9 +110,31 @@ namespace SimpleRtspPlayer.RawFramesReceiving
             ConnectionStatusChanged?.Invoke(this, status);
         }
 
-        private async Task<DateTime> GetRtspUriDateTimeAsync(string rtspUri)
+        private async Task<(bool IsSetTimestampInClock, DateTime? InitialTimestamp)> GetRtspUriDateTimeAsync(string rtspUri)
         {
+
+            return await Task.Run<(bool IsSetTimestampInClock, DateTime? InitialTimestamp)>(() =>
+                 {
+                     DateTime? dateTime = null;
+                     if (TryParseMotorolaDatetime(rtspUri, out dateTime))
+                         return (false, dateTime);
+
+                     if (TryParseIntelbrasAndHikvisionIsapi(rtspUri, out dateTime))
+                         return (true, dateTime);
+
+                     throw new ArgumentException("DateTime invalid");
+                 });
+        }
+
+        private bool TryParseIntelbrasAndHikvisionIsapi(string rtspUri, out DateTime? dateTime)
+        {
+            dateTime = null;
+
+            if (!rtspUri.Contains("starttime="))
+                return false;
+
             Regex HikvisionIsapiDateTimeFormat = new Regex(@"\d{8}\w*(t)*\w\d{6}\w*(z)*\w");
+
             Regex IntelbrasDateTimeFormat = new Regex(@"\d{4}\w*(_)*\w\d{2}\w*(_)*\w\d{2}\w*(_)*\w\d{2}\w*(_)*\w\d{2}\w*(_)*\w\d{2}");
             string[] stringSeparator = new string[] { "starttime=" };
 
@@ -118,19 +146,48 @@ namespace SimpleRtspPlayer.RawFramesReceiving
             DateTime initialDate = DateTime.MinValue;
 
             if (HikvisionIsapiDateTimeFormat.IsMatch(startDate[1]))
-                initialDate = await ParseDateToTimeAsync(startDate[1].Replace("t", String.Empty).Replace("z", String.Empty));
+                initialDate = ParseDateToTime(startDate[1].Replace("t", String.Empty).Replace("z", String.Empty));
             else if (IntelbrasDateTimeFormat.IsMatch(startDate[1]))
-                initialDate = await ParseDateToTimeAsync(startDate[1].Replace("_", String.Empty));
-
-            await Task.Delay(500);
-            return initialDate;
+                initialDate = ParseDateToTime(startDate[1].Replace("_", String.Empty));
+            dateTime = initialDate;
+            return true;
         }
 
-        private async Task<DateTime> ParseDateToTimeAsync(string dateTime)
+        private bool TryParseMotorolaDatetime(string rtspUri, out DateTime? dateTime)
+        {
+            dateTime = null;
+
+            Regex MotorolaDate = new Regex(@"\d{4}\W*(-)*\W\d{2}\W*(-)*\W\d{2}");
+            Regex MotorolaTime = new Regex(@"\d{2}\W*(:)*\W\d{2}\W*(:)*\W\d{2}");
+
+            //rtsp://corseg0162.ddns.net:3002/chID=1&date=2022-05-06&time=19:43:50&timelen=20&action=playback
+            var dateSeparator = "date=";
+            var timeSeparator = "&time=";
+            var validUri = rtspUri.Contains(dateSeparator) && rtspUri.Contains("time=");
+
+            if (!validUri)
+                return false;
+
+            var dateSplited = rtspUri.Split(new string[] { dateSeparator, timeSeparator, "&timelen" }, StringSplitOptions.RemoveEmptyEntries);
+            var isValidRegex = MotorolaDate.IsMatch(dateSplited[1]) && MotorolaTime.IsMatch(dateSplited[2]);
+
+            if (!isValidRegex)
+                return false;
+
+            if (!DateTime.TryParseExact(
+                dateSplited[1] + dateSplited[2], "yyyy-MM-ddHH:mm:ss",
+                CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal,
+                out var dateTimeConverted))
+                return false;
+
+            dateTime = dateTimeConverted;
+            return true;
+        }
+
+        private DateTime ParseDateToTime(string dateTime)
         {
             DateTime convertedDateTime = DateTime.MinValue;
 
-            await Task.Delay(500);
             DateTime.TryParseExact(dateTime, "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out convertedDateTime);
 
             return convertedDateTime;
