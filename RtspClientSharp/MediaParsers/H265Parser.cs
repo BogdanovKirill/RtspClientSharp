@@ -29,6 +29,7 @@ namespace RtspClientSharp.MediaParsers
         private readonly MemoryStream _frameStream;
 
         public Action<RawFrame> FrameGenerated;
+        public Action<byte[]> NaluReceived;
 
         public H265Parser(Func<DateTime> frameTimestampProvider)
         {
@@ -149,6 +150,17 @@ namespace RtspClientSharp.MediaParsers
             //Checking Nal unit type
             if (!RtpH265TypeUtils.CheckIfIsValid(nalUnitType))
                 throw new H265ParserException($"Invalid (HEVC) NAL Unit Type { nalUnitType }.");
+
+            if (hasStartMarker)
+                NaluReceived?.Invoke(byteSegment.ToArray());
+            else
+            {
+                var nalu = new byte[byteSegment.Count + RawH265Frame.StartMarker.Length];
+                RawH265Frame.StartMarker.CopyTo(nalu, 0);
+                Array.Copy(byteSegment.Array, offset, nalu, RawH265Frame.StartMarker.Length, byteSegment.Count);
+                NaluReceived?.Invoke(nalu);
+            }
+
 
             switch ((RtpH265NALUType)nalUnitType)
             {

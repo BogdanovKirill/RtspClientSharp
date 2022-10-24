@@ -11,6 +11,8 @@ namespace RtspClientSharp.MediaParsers
         public DateTime BaseTime { get; set; }
 
         public Action<RawFrame> FrameGenerated { get; set; }
+        public Action<byte[]> NaluReceived { get; set; }
+
 
         public abstract void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit);
 
@@ -32,14 +34,14 @@ namespace RtspClientSharp.MediaParsers
             FrameGenerated?.Invoke(e);
         }
 
-        public static IMediaPayloadParser CreateFrom(CodecInfo codecInfo)
+        public static IMediaPayloadParser CreateFrom(CodecInfo codecInfo, Action<byte[]> naluReceived)
         {
             switch (codecInfo)
             {
                 case H264CodecInfo h264CodecInfo:
-                    return new H264VideoPayloadParser(h264CodecInfo);
+                    return new H264VideoPayloadParser(h264CodecInfo, naluReceived);
                 case H265CodecInfo h265CodecInfo:
-                    return new H265VideoPayloadParser(h265CodecInfo);
+                    return new H265VideoPayloadParser(h265CodecInfo, naluReceived);
                 case MJPEGCodecInfo _:
                     return new MJPEGVideoPayloadParser();
                 case AACCodecInfo aacCodecInfo:

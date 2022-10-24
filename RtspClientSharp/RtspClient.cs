@@ -19,6 +19,7 @@ namespace RtspClientSharp
         public ConnectionParameters ConnectionParameters { get; }
 
         public event EventHandler<RawFrame> FrameReceived;
+        public event EventHandler<byte[]> NaluReceived;
 
         public RtspClient(ConnectionParameters connectionParameters)
         {

@@ -11,8 +11,8 @@ namespace SimpleRtspClient
     {
         static void Main()
         {
-            var serverUri = new Uri("rtsp://192.168.1.77:554/ucast/11");
-            var credentials = new NetworkCredential("admin", "12345678");
+            var serverUri = new Uri("rtsp://192.168.40.31/onvif-media/media.amp?profile=profile_2_h264");
+            var credentials = new NetworkCredential("root", "pass");
 
             var connectionParameters = new ConnectionParameters(serverUri, credentials);
             var cancellationTokenSource = new CancellationTokenSource();
@@ -38,6 +38,9 @@ namespace SimpleRtspClient
                 {
                     rtspClient.FrameReceived +=
                         (sender, frame) => Console.WriteLine($"New frame {frame.Timestamp}: {frame.GetType().Name}");
+
+                    rtspClient.NaluReceived += (s, data) =>
+                        Console.WriteLine($"nalu {data.Length}");
 
                     while (true)
                     {

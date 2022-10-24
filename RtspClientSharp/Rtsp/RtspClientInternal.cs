@@ -50,6 +50,7 @@ namespace RtspClientSharp.Rtsp
         private int _disposed;
 
         public Action<RawFrame> FrameReceived;
+        public Action<byte[]> NaluReceived;
 
         public RtspClientInternal(ConnectionParameters connectionParameters,
             Func<IRtspTransportClient> transportClientProvider = null)

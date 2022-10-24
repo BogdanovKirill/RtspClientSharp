@@ -27,19 +27,26 @@ namespace RtspClientSharp.MediaParsers
         private bool _waitForStartFu = true;
         private TimeSpan _timeOffset = TimeSpan.MinValue;
 
-        public H264VideoPayloadParser(H264CodecInfo codecInfo)
+        public H264VideoPayloadParser(H264CodecInfo codecInfo, Action<byte[]> naluReceived)
         {
+            NaluReceived= naluReceived;
+
             if (codecInfo == null)
                 throw new ArgumentNullException(nameof(codecInfo));
             if (codecInfo.SpsPpsBytes == null)
                 throw new ArgumentException($"{nameof(codecInfo.SpsPpsBytes)} is null", nameof(codecInfo));
 
-            _h264Parser = new H264Parser(() => GetFrameTimestamp(_timeOffset)) {FrameGenerated = OnFrameGenerated};
+            _h264Parser = new H264Parser(() => GetFrameTimestamp(_timeOffset)) {FrameGenerated = OnFrameGenerated, NaluReceived = OnNaluReceived};
 
             if (codecInfo.SpsPpsBytes.Length != 0)
                 _h264Parser.Parse(new ArraySegment<byte>(codecInfo.SpsPpsBytes), false);
 
             _nalStream = new MemoryStream(8 * 1024);
+        }
+
+        private void OnNaluReceived(byte[] obj)
+        {
+            NaluReceived?.Invoke(obj);
         }
 
         public override void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit)
