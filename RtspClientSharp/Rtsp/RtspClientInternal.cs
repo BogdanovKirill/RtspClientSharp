@@ -298,7 +298,7 @@ namespace RtspClientSharp.Rtsp
 
             ParseSessionHeader(setupResponse.Headers[WellKnownHeaders.Session]);
 
-            _mediaPayloadParser = MediaPayloadParser.CreateFrom(track.Codec);
+            _mediaPayloadParser = MediaPayloadParser.CreateFrom(track.Codec, OnNaluReceived);
             _mediaPayloadParser.BaseTime = (initialTimeStamp != null ? initialTimeStamp.Value : default(DateTime));
 
             IRtpSequenceAssembler rtpSequenceAssembler;
@@ -325,6 +325,11 @@ namespace RtspClientSharp.Rtsp
 
             var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStream, rtcpStream, senderSyncSourceId);
             _reportProvidersMap.Add(rtpChannelNumber, rtcpReportsProvider);
+        }
+
+        private void OnNaluReceived(byte[] nalu)
+        {
+            NaluReceived?.Invoke(nalu);
         }
 
         private async Task SendRtspKeepAliveAsync(CancellationToken token)
