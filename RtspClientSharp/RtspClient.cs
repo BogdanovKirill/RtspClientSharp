@@ -19,6 +19,7 @@ namespace RtspClientSharp
         public ConnectionParameters ConnectionParameters { get; }
 
         public event EventHandler<RawFrame> FrameReceived;
+        public event EventHandler<byte[]> NaluReceived;
 
         public RtspClient(ConnectionParameters connectionParameters)
         {
@@ -46,7 +47,7 @@ namespace RtspClientSharp
         /// <exception cref="OperationCanceledException"></exception>
         /// <exception cref="InvalidCredentialException"></exception>
         /// <exception cref="RtspClientException"></exception>
-        public async Task ConnectAsync(CancellationToken token)
+        public async Task ConnectAsync(RtspRequestParams requestParams)
         {
             await Task.Run(async () =>
             {
@@ -54,7 +55,7 @@ namespace RtspClientSharp
 
                 try
                 {
-                    Task connectionTask = _rtspClientInternal.ConnectAsync(token);
+                    Task connectionTask = _rtspClientInternal.ConnectAsync(requestParams);
 
                     if (connectionTask.IsCompleted)
                     {
@@ -64,7 +65,7 @@ namespace RtspClientSharp
 
                     var delayTaskCancelTokenSource = new CancellationTokenSource();
                     using (var linkedTokenSource =
-                        CancellationTokenSource.CreateLinkedTokenSource(delayTaskCancelTokenSource.Token, token))
+                        CancellationTokenSource.CreateLinkedTokenSource(delayTaskCancelTokenSource.Token, requestParams.Token))
                     {
                         CancellationToken delayTaskToken = linkedTokenSource.Token;
 
@@ -106,7 +107,7 @@ namespace RtspClientSharp
 
                     throw;
                 }
-            }, token).ConfigureAwait(false);
+            }, requestParams.Token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -217,6 +218,10 @@ namespace RtspClientSharp
                 {
                     Volatile.Write(ref _anyFrameReceived, true);
                     FrameReceived?.Invoke(this, frame);
+                },
+                NaluReceived = buf =>
+                {
+                    NaluReceived?.Invoke(this, buf);
                 }
             };
         }

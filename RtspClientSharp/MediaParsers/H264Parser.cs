@@ -32,6 +32,7 @@ namespace RtspClientSharp.MediaParsers
         private readonly MemoryStream _frameStream;
 
         public Action<RawFrame> FrameGenerated;
+        public Action<byte[]> NaluReceived;
 
         public H264Parser(Func<DateTime> frameTimestampProvider)
         {
@@ -99,7 +100,6 @@ namespace RtspClientSharp.MediaParsers
         {
             _frameStream.Position = 0;
             _sliceType = -1;
-            _waitForIFrame = true;
         }
 
         private void SlicerOnNalUnitFound(ArraySegment<byte> byteSegment)
@@ -122,6 +122,16 @@ namespace RtspClientSharp.MediaParsers
 
             if (!(nalUnitType > 0 && nalUnitType < 24))
                 throw new H264ParserException($"Invalid nal unit type: {nalUnitType}");
+
+            if (hasStartMarker)
+                NaluReceived?.Invoke(byteSegment.ToArray());
+            else
+            {
+                var nalu = new byte[byteSegment.Count + RawH264Frame.StartMarker.Length];
+                RawH264Frame.StartMarker.CopyTo(nalu, 0);
+                Array.Copy(byteSegment.Array, offset, nalu, RawH264Frame.StartMarker.Length, byteSegment.Count);
+                NaluReceived?.Invoke(nalu);
+            }
 
             if (nalUnitType == 7)
             {

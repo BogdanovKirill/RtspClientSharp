@@ -30,6 +30,8 @@ namespace RtspClientSharp.Rtsp
         private readonly Func<IRtspTransportClient> _transportClientProvider;
         private readonly RtspRequestMessageFactory _requestMessageFactory;
 
+        private IMediaPayloadParser _mediaPayloadParser;
+
         private readonly Dictionary<int, ITransportStream> _streamsMap = new Dictionary<int, ITransportStream>();
         private readonly ConcurrentDictionary<int, Socket> _udpClientsMap = new ConcurrentDictionary<int, Socket>();
 
@@ -49,6 +51,7 @@ namespace RtspClientSharp.Rtsp
         private int _disposed;
 
         public Action<RawFrame> FrameReceived;
+        public Action<byte[]> NaluReceived;
 
         public RtspClientInternal(ConnectionParameters connectionParameters,
             Func<IRtspTransportClient> transportClientProvider = null)
@@ -61,22 +64,25 @@ namespace RtspClientSharp.Rtsp
             _requestMessageFactory = new RtspRequestMessageFactory(fixedRtspUri, connectionParameters.UserAgent);
         }
 
-        public async Task ConnectAsync(CancellationToken token)
+        public async Task ConnectAsync(RtspRequestParams requestParams)
         {
+            if (requestParams == null)
+                throw new RtspClientException("Request parameters can't be null");
+
             IRtspTransportClient rtspTransportClient = _transportClientProvider();
             Volatile.Write(ref _rtspTransportClient, rtspTransportClient);
 
-            await _rtspTransportClient.ConnectAsync(token);
+            await _rtspTransportClient.ConnectAsync(requestParams.Token);
 
             RtspRequestMessage optionsRequest = _requestMessageFactory.CreateOptionsRequest();
-            RtspResponseMessage optionsResponse = await _rtspTransportClient.ExecuteRequest(optionsRequest, token);
+            RtspResponseMessage optionsResponse = await _rtspTransportClient.ExecuteRequest(optionsRequest, requestParams.Token);
 
             if (optionsResponse.StatusCode == RtspStatusCode.Ok)
                 ParsePublicHeader(optionsResponse.Headers[WellKnownHeaders.Public]);
 
             RtspRequestMessage describeRequest = _requestMessageFactory.CreateDescribeRequest();
             RtspResponseMessage describeResponse =
-                await _rtspTransportClient.EnsureExecuteRequest(describeRequest, token);
+                await _rtspTransportClient.EnsureExecuteRequest(describeRequest, requestParams.Token);
 
             string contentBaseHeader = describeResponse.Headers[WellKnownHeaders.ContentBase];
 
@@ -87,17 +93,29 @@ namespace RtspClientSharp.Rtsp
             IEnumerable<RtspTrackInfo> tracks = parser.Parse(describeResponse.ResponseBody);
 
             bool anyTrackRequested = false;
+
             foreach (RtspMediaTrackInfo track in GetTracksToSetup(tracks))
             {
-                await SetupTrackAsync(track, token);
+                await SetupTrackAsync(requestParams.InitialTimestamp, track, requestParams.Token);
                 anyTrackRequested = true;
             }
 
             if (!anyTrackRequested)
                 throw new RtspClientException("Any suitable track is not found");
 
-            RtspRequestMessage playRequest = _requestMessageFactory.CreatePlayRequest();
-            await _rtspTransportClient.EnsureExecuteRequest(playRequest, token, 1);
+            // TODO: Seems like some timestamps are being returned with 2 different timezones and/or some difference between the requested datetime and the returned one.
+            RtspRequestMessage playRequest = requestParams.IsSetTimestampInClock ? _requestMessageFactory.CreatePlayRequest(requestParams) : _requestMessageFactory.CreatePlayRequest();
+            RtspResponseMessage playResponse =
+            await _rtspTransportClient.EnsureExecuteRequest(playRequest, requestParams.Token, 1);
+
+            //// TODO : Create a specific parse to convert the clock values
+            //Regex clockRegex = new Regex(@"clock=(?<startTime>\d{8}T\d{6}Z)\-(?<endTime>\d{8}T\d{6}Z)", RegexOptions.Singleline);
+            //foreach (string playResponseHeader in playResponse.Headers.GetValues("Range"))
+            //{
+            //    Match clockMatches = clockRegex.Match(playResponseHeader);
+            //    if (clockMatches.Success)
+            //        _mediaPayloadParser.BaseTime = DateTime.ParseExact(clockMatches.Groups["startTime"].Value, "yyyyMMddTHHmmssZ", CultureInfo.InvariantCulture, DateTimeStyles.None);
+            //}
         }
 
         public async Task ReceiveAsync(CancellationToken token)
@@ -179,7 +197,7 @@ namespace RtspClientSharp.Rtsp
             return RtcpReportIntervalBaseMs + _random.Next(0, 11) * 100;
         }
 
-        private async Task SetupTrackAsync(RtspMediaTrackInfo track, CancellationToken token)
+        private async Task SetupTrackAsync(DateTime? initialTimeStamp, RtspMediaTrackInfo track, CancellationToken token)
         {
             RtspRequestMessage setupRequest;
             RtspResponseMessage setupResponse;
@@ -281,22 +299,23 @@ namespace RtspClientSharp.Rtsp
 
             ParseSessionHeader(setupResponse.Headers[WellKnownHeaders.Session]);
 
-            IMediaPayloadParser mediaPayloadParser = MediaPayloadParser.CreateFrom(track.Codec);
+            _mediaPayloadParser = MediaPayloadParser.CreateFrom(track.Codec, OnNaluReceived);
+            _mediaPayloadParser.BaseTime = (initialTimeStamp != null ? initialTimeStamp.Value : default(DateTime));
 
             IRtpSequenceAssembler rtpSequenceAssembler;
 
             if (_connectionParameters.RtpTransport == RtpTransportProtocol.TCP)
             {
                 rtpSequenceAssembler = null;
-                mediaPayloadParser.FrameGenerated = OnFrameGeneratedLockfree;
+                _mediaPayloadParser.FrameGenerated = OnFrameGeneratedLockfree;
             }
             else
             {
                 rtpSequenceAssembler = new RtpSequenceAssembler(Constants.UdpReceiveBufferSize, 256);
-                mediaPayloadParser.FrameGenerated = OnFrameGeneratedThreadSafe;
+                _mediaPayloadParser.FrameGenerated = OnFrameGeneratedThreadSafe;
             }
 
-            var rtpStream = new RtpStream(mediaPayloadParser, track.SamplesFrequency, rtpSequenceAssembler);
+            var rtpStream = new RtpStream(_mediaPayloadParser, track.SamplesFrequency, rtpSequenceAssembler);
             _streamsMap.Add(rtpChannelNumber, rtpStream);
 
             var rtcpStream = new RtcpStream();
@@ -307,6 +326,11 @@ namespace RtspClientSharp.Rtsp
 
             var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStream, rtcpStream, senderSyncSourceId);
             _reportProvidersMap.Add(rtpChannelNumber, rtcpReportsProvider);
+        }
+
+        private void OnNaluReceived(byte[] nalu)
+        {
+            NaluReceived?.Invoke(nalu);
         }
 
         private async Task SendRtspKeepAliveAsync(CancellationToken token)

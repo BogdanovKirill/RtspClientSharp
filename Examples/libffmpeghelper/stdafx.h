@@ -21,8 +21,8 @@ extern "C"
 	#include <libavutil/mathematics.h>
 	#include <libavutil/samplefmt.h>
 	#include <libswscale/swscale.h>
-    #include <libavutil/samplefmt.h>
-    #include <libswresample/swresample.h>
+	#include <libavutil/samplefmt.h>
+	#include <libswresample/swresample.h>
 }
 
 #include "export.h"

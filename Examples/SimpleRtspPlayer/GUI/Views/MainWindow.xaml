@@ -34,6 +34,10 @@
         </i:EventTrigger>
     </i:Interaction.Triggers>
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -41,7 +45,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <views:VideoView Grid.Row="0" VideoSource="{Binding VideoSource}" />
+        <views:VideoView Grid.Column="0" Grid.Row="0" VideoSource="{Binding VideoSource}" />
         <Grid Grid.Row="1" Margin="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*" />
@@ -74,7 +78,7 @@
             <Button Content="Start" Width="200" Margin="4" Command="{Binding StartClickCommand}" />
             <Button Content="Stop" Width="200" Margin="4" Command="{Binding StopClickCommand}" />
         </StackPanel>
-        <TextBlock Margin="2" Grid.Row="3" Text="Supported codecs: H264/MJPEG; Use &quot;http:&#47;&#47;&quot; prefix in address to connect through HTTP tunnel" />
+        <TextBlock Margin="2" Grid.Row="3" Text="Supported codecs: H264/H265/MJPEG; Use &quot;http:&#47;&#47;&quot; prefix in address to connect through HTTP tunnel" />
         <TextBlock Margin="2" Grid.Row="4" Height="20" Background="LightGray" Text="{Binding Status}" />
     </Grid>
 </Window>

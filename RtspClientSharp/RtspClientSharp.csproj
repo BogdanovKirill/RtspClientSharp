@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Kirill Bogdanov</Authors>
     <RepositoryUrl>https://github.com/BogdanovKirill/RtspClientSharp</RepositoryUrl>
     <PackageTags>rtsp, rtp, rtcp</PackageTags>
@@ -17,7 +17,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
     <Copyright>Copyright ©2019 Kirill Bogdanov</Copyright>
-    <Version>1.3.3</Version>
+    <Version>1.5.5</Version>
     <PackageReleaseNotes>-Bug fix: Additional check for NAL start marker was added. That should resolve issue with some cameras which sends one NAL for one frame without start bytes (0 0 0 1)
 
 More info: https://github.com/BogdanovKirill/RtspClientSharp/issues/49</PackageReleaseNotes>
@@ -26,6 +26,8 @@ More info: https://github.com/BogdanovKirill/RtspClientSharp/issues/49</PackageR
     <Configurations>Debug;Release;Publish</Configurations>
     <AssemblyOriginatorKeyFile>signkey.pfx</AssemblyOriginatorKeyFile>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <AssemblyVersion>1.5.4.0</AssemblyVersion>
+    <FileVersion>1.5.4.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -53,5 +55,9 @@ More info: https://github.com/BogdanovKirill/RtspClientSharp/issues/49</PackageR
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Publish|x64'">
     <DocumentationFile>bin\Release\netstandard2.0\RtspClientSharp.xml</DocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Logger\Logger.csproj" />
+  </ItemGroup>
 
 </Project>

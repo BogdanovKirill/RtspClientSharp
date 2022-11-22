@@ -1,17 +1,19 @@
-﻿using System;
-using RtspClientSharp.Codecs;
+﻿using RtspClientSharp.Codecs;
 using RtspClientSharp.Codecs.Audio;
 using RtspClientSharp.Codecs.Data;
 using RtspClientSharp.Codecs.Video;
 using RtspClientSharp.RawFrames;
+using System;
 
 namespace RtspClientSharp.MediaParsers
 {
     abstract class MediaPayloadParser : IMediaPayloadParser
     {
-        private DateTime _baseTime = DateTime.MinValue;
+        public DateTime BaseTime { get; set; }
 
         public Action<RawFrame> FrameGenerated { get; set; }
+        public Action<byte[]> NaluReceived { get; set; }
+
 
         public abstract void Parse(TimeSpan timeOffset, ArraySegment<byte> byteSegment, bool markerBit);
 
@@ -19,13 +21,13 @@ namespace RtspClientSharp.MediaParsers
 
         protected DateTime GetFrameTimestamp(TimeSpan timeOffset)
         {
+            if (BaseTime == default(DateTime))
+                BaseTime = DateTime.UtcNow;
+
             if (timeOffset == TimeSpan.MinValue)
-                return DateTime.UtcNow;
+                return BaseTime;
 
-            if (_baseTime == DateTime.MinValue)
-                _baseTime = DateTime.UtcNow;
-
-            return _baseTime + timeOffset;
+            return BaseTime + timeOffset;
         }
 
         protected virtual void OnFrameGenerated(RawFrame e)
@@ -33,12 +35,14 @@ namespace RtspClientSharp.MediaParsers
             FrameGenerated?.Invoke(e);
         }
 
-        public static IMediaPayloadParser CreateFrom(CodecInfo codecInfo)
+        public static IMediaPayloadParser CreateFrom(CodecInfo codecInfo, Action<byte[]> naluReceived)
         {
             switch (codecInfo)
             {
                 case H264CodecInfo h264CodecInfo:
-                    return new H264VideoPayloadParser(h264CodecInfo);
+                    return new H264VideoPayloadParser(h264CodecInfo, naluReceived);
+                case H265CodecInfo h265CodecInfo:
+                    return new H265VideoPayloadParser(h265CodecInfo, naluReceived);
                 case MJPEGCodecInfo _:
                     return new MJPEGVideoPayloadParser();
                 case AACCodecInfo aacCodecInfo:

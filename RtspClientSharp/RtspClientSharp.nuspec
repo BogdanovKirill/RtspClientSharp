@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>RtspClientSharp</id>
+    <version>1.5.5</version>
+    <authors>Kirill Bogdanov</authors>
+    <owners>Kirill Bogdanov</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <iconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</iconUrl>
+    <description>
+      C# RTSP Client for .NET
+
+      - Supported transport protocols: TCP/HTTP/UDP
+      - Supported media codecs: H.264/MJPEG/AAC/G711A/G711U/PCM/G726
+      - No external dependencies, pure C# code
+      - Asynchronous nature with cancellation tokens support
+      - Designed to be fast and scaleable
+      - Low GC pressure during receive stage (when RTSP session is established); low amount of freezes under high load	  	  
+    </description>
+    <copyright>Copyright ©2019 Kirill Bogdanov</copyright>
+    <tags>rtsp, rtp, rtcp</tags>
+    <repository type="git" url="https://github.com/BogdanovKirill/RtspClientSharp" />
+    <dependencies>
+      <group targetFramework=".NETStandard2.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\netstandard2.0\*.dll" target="lib" />
+  </files>
+</package>
