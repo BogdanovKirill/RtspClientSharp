@@ -64,7 +64,7 @@ namespace RtspClientSharp.UnitTests
             cancellationTokenSource.Cancel();
 
             var rtspClient = new RtspClient(ConnectionParameters, () => transportClientMock.Object);
-            await rtspClient.ConnectAsync(new RtspRequestParams { Token = CancellationToken.None });
+            await rtspClient.ConnectAsync(new RtspRequestParams { Token = cancellationTokenSource.Token });
         }
 
         [TestMethod]
