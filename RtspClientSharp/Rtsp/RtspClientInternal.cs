@@ -513,31 +513,27 @@ namespace RtspClientSharp.Rtsp
 
             while (!token.IsCancellationRequested)
             {
-                try
+                TpktPayload payload = await _tpktStream.ReadAsync();
+
+                if (_streamsMap.TryGetValue(payload.Channel, out ITransportStream stream))
+                    stream.Process(payload.PayloadSegment);
+
+                int ticksNow = Environment.TickCount;
+
+                if (!TimeUtils.IsTimeOver(ticksNow, lastTimeRtcpReportsSent, nextRtcpReportInterval))
+                    continue;
+
+                lastTimeRtcpReportsSent = ticksNow;
+                nextRtcpReportInterval = GetNextRtcpReportIntervalMs();
+
+                foreach (KeyValuePair<int, RtcpReceiverReportsProvider> pair in _reportProvidersMap)
                 {
-                    TpktPayload payload = await _tpktStream.ReadAsync();
+                    IEnumerable<RtcpPacket> packets = pair.Value.GetReportPackets();
+                    ArraySegment<byte> byteSegment = SerializeRtcpPackets(packets, bufferStream);
+                    int rtcpChannel = pair.Key + 1;
 
-                    if (_streamsMap.TryGetValue(payload.Channel, out ITransportStream stream))
-                        stream.Process(payload.PayloadSegment);
-
-                    int ticksNow = Environment.TickCount;
-
-                    if (!TimeUtils.IsTimeOver(ticksNow, lastTimeRtcpReportsSent, nextRtcpReportInterval))
-                        continue;
-
-                    lastTimeRtcpReportsSent = ticksNow;
-                    nextRtcpReportInterval = GetNextRtcpReportIntervalMs();
-
-                    foreach (KeyValuePair<int, RtcpReceiverReportsProvider> pair in _reportProvidersMap)
-                    {
-                        IEnumerable<RtcpPacket> packets = pair.Value.GetReportPackets();
-                        ArraySegment<byte> byteSegment = SerializeRtcpPackets(packets, bufferStream);
-                        int rtcpChannel = pair.Key + 1;
-
-                        await _tpktStream.WriteAsync(rtcpChannel, byteSegment);
-                    }
+                    await _tpktStream.WriteAsync(rtcpChannel, byteSegment);
                 }
-                catch { }
             }
         }
 

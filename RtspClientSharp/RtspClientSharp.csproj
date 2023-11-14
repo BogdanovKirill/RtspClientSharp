@@ -17,7 +17,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIconUrl>https://github.com/BogdanovKirill/RtspClientSharp/blob/master/Images/package_icon.png?raw=true</PackageIconUrl>
     <Copyright>Copyright ©2019 Kirill Bogdanov</Copyright>
-    <Version>1.5.6</Version>
+    <Version>1.5.5</Version>
     <PackageReleaseNotes>-Bug fix: Additional check for NAL start marker was added. That should resolve issue with some cameras which sends one NAL for one frame without start bytes (0 0 0 1)
 
 More info: https://github.com/BogdanovKirill/RtspClientSharp/issues/49</PackageReleaseNotes>
