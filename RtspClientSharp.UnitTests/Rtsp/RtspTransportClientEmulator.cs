@@ -45,7 +45,8 @@ namespace RtspClientSharp.UnitTests.Rtsp
             new NameValueCollection
             {
                 {"SESSION", "984686A7;timeout=60"},
-                {"TRANSPORT", "RTP/AVP/TCP;unicast;interleaved=1-2;ssrc=8D50905E;mode=\"PLAY\""}
+                {"TRANSPORT", "RTP/AVP/TCP;unicast;interleaved=1-2;ssrc=8D50905E;mode=\"PLAY\""},
+                {"MEDIA-PROPERTIES", "Random-Access=1.0s, Unlimited, Immutable,Scales=\"-1, 0.5, 0.25, 0.125,:1, 2, 4\""}
             });
 
         private static readonly RtspResponseMessage PlayResponse = new RtspResponseMessage(RtspStatusCode.Ok,

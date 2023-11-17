@@ -8,5 +8,6 @@
         public static readonly string Public = "PUBLIC";
         public static readonly string Session = "SESSION";
         public static readonly string Transport = "TRANSPORT";
+        public static readonly string MediaProperties = "MEDIA-PROPERTIES";
     }
 }

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using RtspClientSharp.Codecs.Audio;
@@ -24,6 +25,8 @@ namespace RtspClientSharp.Rtsp
     {
         private const int RtcpReportIntervalBaseMs = 5000;
         private static readonly char[] TransportAttributesSeparator = { ';' };
+        private static readonly string ScaleSetupHeaderRtspResponse = "Scales=";
+        private static readonly string ScalePlayRequestHeader = "Scale";
 
         private readonly ConnectionParameters _connectionParameters;
         private readonly Func<IRtspTransportClient> _transportClientProvider;
@@ -48,6 +51,7 @@ namespace RtspClientSharp.Rtsp
         private readonly CancellationTokenSource _serverCancellationTokenSource = new CancellationTokenSource();
         private bool _isServerSupportsGetParameterRequest;
         private int _disposed;
+        private string _supportedScale;
 
         public Action<RawFrame> FrameReceived;
 
@@ -101,10 +105,17 @@ namespace RtspClientSharp.Rtsp
             if (!anyTrackRequested)
                 throw new RtspClientException("Any suitable track is not found");
 
+            if (!string.IsNullOrEmpty(_supportedScale) && IsScaleRequested(requestParams))
+            {
+                if (requestParams.Headers.TryGetValue(ScalePlayRequestHeader, out string scaleRequested))
+                {
+                    requestParams.Headers[ScalePlayRequestHeader] = GetScaleFromSupportedScalesBasedOnRequestedScale(scaleRequested);
+                }
+            }
+
             // TODO: Seems like some timestamps are being returned with 2 different timezones and/or some difference between the requested datetime and the returned one.
             RtspRequestMessage playRequest = requestParams.IsSetTimestampInClock ? _requestMessageFactory.CreatePlayRequest(requestParams) : _requestMessageFactory.CreatePlayRequest();
-            RtspResponseMessage playResponse =
-            await _rtspTransportClient.EnsureExecuteRequest(playRequest, requestParams.Token, 1);
+            RtspResponseMessage playResponse = await _rtspTransportClient.EnsureExecuteRequest(playRequest, requestParams.Token, 1);
 
             //// TODO : Create a specific parse to convert the clock values
             //Regex clockRegex = new Regex(@"clock=(?<startTime>\d{8}T\d{6}Z)\-(?<endTime>\d{8}T\d{6}Z)", RegexOptions.Singleline);
@@ -253,6 +264,10 @@ namespace RtspClientSharp.Rtsp
                 setupResponse = await _rtspTransportClient.EnsureExecuteRequest(setupRequest, token);
             }
 
+            string mediaPropertiesHeader = setupResponse.Headers[WellKnownHeaders.MediaProperties];
+            if (!string.IsNullOrEmpty(mediaPropertiesHeader))
+                GetSupportedScaleFromMediaProperties(mediaPropertiesHeader);
+
             string transportHeader = setupResponse.Headers[WellKnownHeaders.Transport];
 
             if (string.IsNullOrEmpty(transportHeader))
@@ -324,6 +339,48 @@ namespace RtspClientSharp.Rtsp
 
             var rtcpReportsProvider = new RtcpReceiverReportsProvider(rtpStream, rtcpStream, senderSyncSourceId);
             _reportProvidersMap.Add(rtpChannelNumber, rtcpReportsProvider);
+        }
+
+        private void GetSupportedScaleFromMediaProperties(string mediaPropertiesHeader)
+        {
+            string[] mediaProperties = Regex.Split(mediaPropertiesHeader, ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+            var scalesIndex = Array.FindIndex(mediaProperties, row => row.Contains(ScaleSetupHeaderRtspResponse));
+            if (scalesIndex == -1)
+                return;
+
+            _supportedScale = mediaProperties.ElementAtOrDefault(scalesIndex).Replace("\"", string.Empty);
+            //if (string.IsNullOrEmpty(scalesHeader))
+            //    return;
+
+            //var scales = scalesHeader.Split(',');
+            //var lastScale = scales.ElementAtOrDefault(scales.Length - 1);
+            //if (string.IsNullOrEmpty(lastScale))
+            //    return;
+
+            //string parsedScale = lastScale.Replace("\"", string.Empty);
+            //if (int.TryParse(parsedScale, out int scaleNumber))
+            //    _supportedScale = parsedScale;
+        }
+
+        private bool IsScaleRequested(RtspRequestParams requestParams)
+        {
+            if (requestParams.Headers == null)
+                return false;
+
+            return requestParams.Headers.ContainsKey(ScalePlayRequestHeader);
+        }
+
+        private string GetScaleFromSupportedScalesBasedOnRequestedScale(string referenceScale)
+        {
+            var scales = _supportedScale.Split(',');
+            if (scales.Contains(referenceScale))
+                return referenceScale;
+
+            if (NumberUtils.IsNegativeNumber(referenceScale))
+                return scales.First();
+            else
+                return scales.Last();
         }
 
         private async Task SendRtspKeepAliveAsync(CancellationToken token)
